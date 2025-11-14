@@ -1,6 +1,3 @@
-# see test_case_example.xls ----
-
-library(testthat)
 
 data(test_data)
 
@@ -28,7 +25,13 @@ test_that("QALY calculations", {
 
 	# T01: QALYs with full discount (rate = 1) should be 0
 	# (Assumes QALYs are gained *after* cycle 0)
-	test_run_t01 <- run_model(test_data, discount_rate = 1)
+  
+  # test_run_t01 <- 
+  #   test_data |> 
+  #   set_discount_rate(1) |>
+  #   run_model()
+	
+  test_run_t01 <- run_model(test_data, discount_rate = 1)
 	expect_equal(get_qalys(test_run_t01), 0)
 
 	# T02: QALYs with no discount (rate = 0) should equal Life Expectancy
@@ -101,11 +104,6 @@ test_that("Life Expectancy (LE) calculations", {
 
 # This block shows how you could use the `check_model_qalys` function
 # from your `test-helpers.R` file for simple, fixed-value checks.
-
-check_model_qalys <- function(test_data, discount_rate, expected_qalys) {
-  test_run <- run_model(test_data, discount_rate = discount_rate)
-  expect_equal(get_qalys(test_run), expected_qalys)
-}
 
 test_that("QALY calculations (using helper)", {
 
