@@ -1,17 +1,6 @@
 
 data(test_data)
 
-test_that("QALY calcs", {
-	# T01
-	test_run <- run_model(test_data, discount = 1)
-	expect_equal(get_qalys(test_run), 0)
-
-	# T02
-	test_run <- run_model(test_data, discount = 0)
-	expect_equal(get_qalys(test_run),
-		     get_le(test_run))
-})
-
 # It assumes the existence of:
 # - `run_model(data, ...)`: Your main model function.
 # - `get_qalys(run)`: Extracts total QALYs from a model run.
@@ -99,30 +88,3 @@ test_that("Life Expectancy (LE) calculations", {
                               n_cycles = n_cycles_test)
     expect_equal(get_le(test_run_t10), n_cycles_test)
 })
-
-# --- 4. Using Helpers (from test-helpers.R) ---
-
-# This block shows how you could use the `check_model_qalys` function
-# from your `test-helpers.R` file for simple, fixed-value checks.
-
-test_that("QALY calculations (using helper)", {
-
-    # T01 (Helper version)
-    check_model_qalys(data = test_data, discount_rate = 1, expected_qalys = 0)
-
-    # T04 (Helper version)
-    # We can't use the helper if we need to modify parameters *inside* the
-    # `run_model` call, unless the helper is updated to pass `...`
-    # to `run_model`.
-    # For now, we'd use the manual version:
-    test_run_t04 <- run_model(test_data, u_healthy = 0, u_sick = 0)
-    expect_equal(get_qalys(test_run_t04), 0)
-
-    # T02 (Manual version)
-    # The helper `check_model_qalys` is for checking against a *fixed*
-    # number. For dynamic checks (comparing two model outputs),
-    # we still write the test manually.
-    test_run_t02 <- run_model(test_data, discount_rate = 0)
-    expect_equal(get_qalys(test_run_t02), get_le(test_run_t02))
-})
-
