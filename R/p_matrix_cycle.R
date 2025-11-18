@@ -5,16 +5,9 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
                            tpProg = 0.01,
                            tpDcm = 0.15,
                            effect = 0.5) {
-  tpDn_lookup <-
-    c("(34,44]" = 0.0017,
-      "(44,54]" = 0.0044,
-      "(54,64]" = 0.0138,
-      "(64,74]" = 0.0379,
-      "(74,84]" = 0.0912,
-      "(84,100]" = 0.1958)
-  
+
   age_grp <- cut(age, breaks = c(34,44,54,64,74,84,100))
-  tpDn <- tpDn_lookup[age_grp]
+  tpDn <- tpDn_lookup()[age_grp]
   
   # Matrix containing transition probabilities for without_drug
   p_matrix["Asymptomatic_disease", "Progressive_disease", "without_drug"] <- tpProg*cycle
@@ -34,4 +27,14 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
   p_matrix["Dead", "Dead", "with_drug"] <- 1
   
   return(p_matrix)
+}
+
+#
+tpDn_lookup <- function() {
+  c("(34,44]" = 0.0017,
+    "(44,54]" = 0.0044,
+    "(54,64]" = 0.0138,
+    "(64,74]" = 0.0379,
+    "(74,84]" = 0.0912,
+    "(84,100]" = 0.1958)
 }

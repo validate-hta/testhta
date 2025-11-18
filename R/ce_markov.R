@@ -1,5 +1,6 @@
 
-#
+#' run cost-effectiveness model
+#'
 ce_markov <- function(start_pop,
                       p_matrix,
                       state_c_matrix,
@@ -8,7 +9,8 @@ ce_markov <- function(start_pop,
                       n_cycles = 46,
                       init_age = 55,
                       s_names = NULL,
-                      t_names = NULL) {
+                      t_names = NULL,
+                      discount_rate = 0.035) {
   
   n_states <- length(start_pop)
   n_treat <- dim(p_matrix)[3]
@@ -41,6 +43,8 @@ ce_markov <- function(start_pop,
   
   total_costs <- setNames(rep(NA, n_treat), t_names)
   total_QALYs <- setNames(rep(NA, n_treat), t_names)
+  total_LE <- setNames(rep(NA, n_treat), t_names)
+  total_LYs <- setNames(rep(NA, n_treat), t_names)
   
   for (i in 1:n_treat) {
     
@@ -48,15 +52,9 @@ ce_markov <- function(start_pop,
     
     for (j in 2:n_cycles) {
       
-      # difference from point estimate case
-      # pass in functions for random sample
-      # rather than fixed values
-      p_matrix <- p_matrix_cycle(p_matrix, age, j - 1,
-                                 tpProg = tpProg(),
-                                 tpDcm = tpDcm(),
-                                 effect = effect())
+      p_matrix <- p_matrix_cycle(p_matrix, age, j - 1)
       
-      # Matrix multiplication
+      # update population with matrix multiplication
       pop[, cycle = j, treatment = i] <-
         pop[, cycle = j - 1, treatment = i] %*% p_matrix[, , treatment = i]
       
@@ -67,27 +65,32 @@ ce_markov <- function(start_pop,
     }
     
     cycle_state_costs[i, ] <-
-      (state_c_matrix[treatment = i, ] %*% pop[, , treatment = i]) * 1/(1 + cDr)^(1:n_cycles - 1)
+      (state_c_matrix[treatment = i, ] %*% pop[, , treatment = i]) * 1/(1 + discount_rate)^(1:n_cycles - 1)
     
     cycle_trans_costs[i, ] <-
-      (c(1,1,1) %*% trans[, , treatment = i]) * 1/(1 + cDr)^(1:n_cycles - 2)
+      (c(1,1,1) %*% trans[, , treatment = i]) * 1/(1 + discount_rate)^(1:n_cycles - 2)
     
     cycle_costs[i, ] <- cycle_state_costs[i, ] + cycle_trans_costs[i, ]
     
     LE[i, ] <- c(1,1,0) %*% pop[, , treatment = i]
     
-    LYs[i, ] <- LE[i, ] * 1/(1 + oDr)^(1:n_cycles - 1)
+    LYs[i, ] <- LE[i, ] * 1/(1 + discount_rate)^(1:n_cycles - 1)
     
     cycle_QALE[i, ] <-
       state_q_matrix[treatment = i, ] %*%  pop[, , treatment = i]
     
-    cycle_QALYs[i, ] <- cycle_QALE[i, ] * 1/(1 + oDr)^(1:n_cycles - 1)
+    cycle_QALYs[i, ] <- cycle_QALE[i, ] * 1/(1 + discount_rate)^(1:n_cycles - 1)
+    
+    total_LE[i] <- sum(LE[treatment = i, -1])
+    total_LYs[i] <- sum(LYs[treatment = i, -1])
     
     total_costs[i] <- sum(cycle_costs[treatment = i, -1])
     total_QALYs[i] <- sum(cycle_QALYs[treatment = i, -1])
   }
   
   list(pop = pop,
+       total_LE = total_LE,
+       total_LYs = total_LYs,
        cycle_costs = cycle_costs,
        cycle_QALYs = cycle_QALYs,
        total_costs = total_costs,
