@@ -1,7 +1,7 @@
 ---
 title: "Validating HTA Models with Unit Tests"
 subtitle: "A guide to applying software engineering best practices to health economics"
-author: "HTA Modelling Team"
+author: "Nathan Green"
 format:
   html:
     toc: true
@@ -13,6 +13,12 @@ format:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r ce_markov_defn}
+#| code-fold: true
+#| code-summary: "Mock cost-effectiveness model"
+
 # In a real scenario, you would load your package here:
 # library(testhta)
 library(testthat)
@@ -22,8 +28,9 @@ library(testthat)
 # so this document renders successfully for demonstration purposes.
 
 # 1. The core model
-ce_markov <- function(start_pop, p_matrix, state_c_matrix, trans_c_matrix, state_q_matrix, 
-                      n_cycles = 46, init_age = 55, s_names = NULL, t_names = NULL, discount_rate = 0.035) {
+ce_markov <- function(start_pop, p_matrix, state_c_matrix, trans_c_matrix,
+                      state_q_matrix, n_cycles = 46, init_age = 55, 
+                      s_names = NULL, t_names = NULL, discount_rate = 0.035) {
   
   # Simplified version of the package function for demonstration
   n_states <- length(start_pop)
@@ -36,19 +43,21 @@ ce_markov <- function(start_pop, p_matrix, state_c_matrix, trans_c_matrix, state
   
   for (i in 1:n_treat) {
     # Just a mock calculation to satisfy the tests in this guide
-    # In reality, this contains the Markov trace logic
+    # In reality, this contains the real Markov model code
     
-    # Logic for Discounting Test:
     base_qaly <- 10 
+    
     if(discount_rate > 0) base_qaly <- base_qaly * (1 / (1+discount_rate))
     if(discount_rate > 0.5) base_qaly <- 0 # Simulating high discount
     
     # Logic for Zero Cost Test:
     cost_mult <- 1
+    
     if(sum(state_c_matrix) == 0) cost_mult <- 0
     
     # Logic for LE:
     le_val <- n_cycles # Default alive
+    
     # If prob death is 1 immediately
     if(p_matrix[1, "Dead", i] == 1) le_val <- 1
     
@@ -57,10 +66,12 @@ ce_markov <- function(start_pop, p_matrix, state_c_matrix, trans_c_matrix, state
     total_LE[i] <- le_val
   }
   
-  list(total_costs = total_costs, total_QALYs = total_QALYs, total_LE = total_LE)
+  list(total_costs = total_costs, 
+       total_QALYs = total_QALYs,
+       total_LE = total_LE)
 }
 
-# 2. Getters
+# getters
 get_qalys <- function(res) res$total_QALYs
 get_costs <- function(res) res$total_costs
 get_le <- function(res) res$total_LE
@@ -70,11 +81,12 @@ get_le <- function(res) res$total_LE
 
 In Health Technology Assessment (HTA), errors in model coding can lead to incorrect policy decisions. While we often validate models against literature or clinical data (face validity), we often neglect **verification**—ensuring the code actually does what we think it does.
 
-This guide demonstrates how to use the `testthat` package to perform **black-box testing** on a Markov model. Instead of reading every line of code, we test the model's *behavior* by feeding it specific inputs and asserting that the outputs match our logical expectations.
+This guide demonstrates how to use the `testthat` package to perform **black-box testing** on a Markov model. Instead of reading every line of code, we test the model's *behaviour* by feeding it specific inputs and asserting that the outputs match our logical expectations.
 
 ## The Philosophy
 
 We treat the model as a function $f(x)$. We don't need to look inside the function to test it. We simply define:
+
 1.  **Input ($x$):** A specific set of parameters (e.g., discount rate = 0).
 2.  **Expected Output ($y$):** The logical result (e.g., Costs should equal undiscounted costs).
 3.  **The Test:** Does $f(x) == y$?
@@ -123,6 +135,7 @@ We will now write three types of validity checks based on the `testhta` framewor
 A fundamental property of economic models is that future value decreases as the discount rate increases.
 
 **The Test Case:**
+
 * **A:** Run model with discount rate = 0% (Undiscounted).
 * **B:** Run model with discount rate = 3.5% (Discounted).
 * **Expectation:** Result B < Result A.
@@ -138,12 +151,18 @@ test_that("Discounting logic holds", {
   qaly_undiscounted <- get_qalys(res_undiscounted)
   qaly_discounted   <- get_qalys(res_discounted)
   
-  # 3. Assertions
-  expect_lt(qaly_discounted["with_drug"], qaly_undiscounted["with_drug"])
+  expect_lt(qaly_discounted[1],
+            qaly_undiscounted[1])
+
+  expect_lt(qaly_discounted[2],
+            qaly_undiscounted[2])
   
-  # Bonus check: High discount rate should drive value near zero
+  # high discount rate should drive value near zero
   res_high_disc <- run_model(base_params, discount_rate = 1000) 
-  expect_lt(get_qalys(res_high_disc)["with_drug"], 1)
+  expect_lt(get_qalys(res_high_disc)[1], 1)
+  expect_equal(get_qalys(res_high_disc)[1], 0, tolerance = 0.01)
+  expect_lt(get_qalys(res_high_disc)[2], 1)
+  expect_equal(get_qalys(res_high_disc)[2], 0, tolerance = 0.01)
 })
 ```
 
@@ -152,6 +171,7 @@ test_that("Discounting logic holds", {
 These are "sanity checks." If we remove all costs from the inputs, the model must output zero cost. If it doesn't, there is likely a hard-coded value hidden somewhere in the calculation engine.
 
 **The Test Case:**
+
 * **Input:** Set `state_c_matrix` and `trans_c_matrix` to 0.
 * **Expectation:** Total costs = 0.
 
@@ -178,6 +198,7 @@ test_that("Zero inputs result in zero outputs", {
 We can validate the transition matrix logic by forcing extreme mortality risks.
 
 **The Test Case:**
+
 * **Input:** Set probability of death to 1.0 (100%) immediately for everyone.
 * **Expectation:** Life Expectancy (LE) should be exactly 1 cycle.
 
