@@ -1,6 +1,9 @@
 # testhta
 
-> **Custom unit tests and validity checks for Health Technology Assessment (HTA) models in R.**
+![Work In Progress](https://img.shields.io/badge/Status-Work%20In%20Progress-red)
+> This package is currently a prototype. Contributions and integration with wider HTA standards are welcome.
+
+**Custom unit tests and validity checks for Health Technology Assessment (HTA) models in R.**
 
 `testhta` provides a framework for applying software engineering best practices—specifically unit testing—to health economic modeling. By leveraging the [`testthat`]([https://testthat.r-lib.org/](https://testthat.r-lib.org/)) package, `testhta` helps modelers verify that their cost-effectiveness models behave as expected under specific conditions.
 
