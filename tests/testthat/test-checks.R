@@ -14,11 +14,11 @@ run_model <- function(input, ...) {
 # --- 1. QALY Calculations ---
 
 test_that("QALY calculations", {
-  ##TODO: set the discount rate _before_ passing to the model
+  # alternatively: set the discount rate _before_ passing to the model
   # test_run_t01 <- 
   #   test_data |> 
   #   set_discount_rate(1) |>
-  #   run_model()
+  #   ce_markov()
   
   # T01: QALYs with full discount should be 0
   # (Assumes QALYs are gained *after* cycle 0)
@@ -44,8 +44,8 @@ test_that("QALY calculations", {
   expect_equal(actual, rep(0, length(actual)), ignore_attr = TRUE)
 })
 
-# --- 2. Cost Calculations ---
-
+# --- Cost Calculations ---
+# T06 and T07 are tied with T03, but they test the cost side of things instead of QALYs
 test_that("Cost calculations", {
 
     # T05: Costs with standard discount should be less than undiscounted costs
@@ -63,20 +63,20 @@ test_that("Cost calculations", {
     expect_equal(get_costs(test_run_t06), rep(0, length(actual)), ignore_attr = TRUE)
 
     # T07: Larger discount should be less than standard discount
-    run_discounted <- run_model(test_data, discount_rate = 0.035)
-    run_full_discount <- run_model(test_data, discount_rate = 1)
-    expect_true(all(get_costs(run_full_discount) < get_costs(run_discounted)))
+    run_discounted_t07 <- run_model(test_data, discount_rate = 0.035)
+    run_full_discount_t07 <- run_model(test_data, discount_rate = 1)
+    expect_true(all(get_costs(run_full_discount_t07) < get_costs(run_discounted_t07)))
 })
 
 
-# --- 3. Life Expectancy (LE) Calculations ---
-
+# --- Life Expectancy (LE) Calculations ---
+# T08, T09, and T10 are tied with T01, but they test the life expectancy side of things instead of QALYs
 test_that("Life Expectancy (LE) calculations", {
 
     # T08: LE should not be affected by discount rate
-    run_discount_00 <- run_model(test_data, discount_rate = 0)
-    run_discount_05 <- run_model(test_data, discount_rate = 0.05)
-    expect_equal(get_le(run_discount_00), get_le(run_discount_05))
+    run_discount_00_t08 <- run_model(test_data, discount_rate = 0)
+    run_discount_05_t08 <- run_model(test_data, discount_rate = 0.05)
+    expect_equal(get_le(run_discount_00_t08), get_le(run_discount_05_t08))
 
     ##TODO: because it get changes by a transition prob function internally?
 

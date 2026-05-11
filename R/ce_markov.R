@@ -1,6 +1,19 @@
 
-#' run cost-effectiveness model
-#'
+#' @title run cost-effectiveness model
+#' @description Runs a Markov model to calculate costs, QALYs, and life expectancy for different treatments
+#' @param start_pop A vector of initial population counts for each health state
+#' @param p_matrix A 3D array of transition probabilities for each treatment
+#' @param state_c_matrix A matrix of state costs for each treatment
+#' @param trans_c_matrix A matrix of transition costs for each treatment
+#' @param state_q_matrix A matrix of state utilities for each treatment
+#' @param n_cycles The number of cycles to run the model for
+#' @param init_age The initial age of the population
+#' @param s_names Optional names for the health states
+#' @param t_names Optional names for the treatments
+#' @param discount_rate The discount rate to apply to costs and QALYs
+#' @return A list containing the population array, total life expectancy, total life-years,
+#' cycle costs, cycle QALYs, total costs, and total QALYs for each treatment
+#' @export
 ce_markov <- function(start_pop,
                       p_matrix,
                       state_c_matrix,

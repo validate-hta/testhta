@@ -1,6 +1,16 @@
 
-# Time-dependent probability matrix
-#
+#' @title Time-dependent probability matrix
+#' 
+#' @description Calculates time-dependent transition probabilities for a Markov model
+#' 
+#' @param p_matrix The base transition probability matrix
+#' @param age The age of the individual
+#' @param cycle The current cycle number
+#' @param tpProg The probability of progression from asymptomatic to progressive disease
+#' @param tpDcm The probability of death from progressive disease
+#' @param effect The effectiveness of the drug
+#' @return The updated transition probability matrix
+#' @export
 p_matrix_cycle <- function(p_matrix, age, cycle,
                            tpProg = 0.01,
                            tpDcm = 0.15,
@@ -29,7 +39,8 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
   return(p_matrix)
 }
 
-#
+#' Look-up table for age-specific probabilities of death from non-disease causes
+#' 
 tpDn_lookup <- function() {
   c("(34,44]" = 0.0017,
     "(44,54]" = 0.0044,
