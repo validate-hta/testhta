@@ -4,7 +4,17 @@
 \alias{p_matrix_cycle}
 \title{Time-dependent probability matrix}
 \usage{
-p_matrix_cycle(p_matrix, age, cycle, tpProg = 0.01, tpDcm = 0.15, effect = 0.5)
+p_matrix_cycle(
+  p_matrix,
+  age,
+  cycle,
+  tpProg = 0.01,
+  tpDcm = 0.15,
+  effect = 0.5,
+  p_healthy_death = NULL,
+  p_sick_death = NULL,
+  ...
+)
 }
 \arguments{
 \item{p_matrix}{The base transition probability matrix}
@@ -18,6 +28,12 @@ p_matrix_cycle(p_matrix, age, cycle, tpProg = 0.01, tpDcm = 0.15, effect = 0.5)
 \item{tpDcm}{The probability of death from progressive disease}
 
 \item{effect}{The effectiveness of the drug}
+
+\item{p_healthy_death}{Optional override for transition probability from healthy to dead}
+
+\item{p_sick_death}{Optional override for transition probability from sick to dead}
+
+\item{...}{Extra arguments}
 }
 \value{
 The updated transition probability matrix

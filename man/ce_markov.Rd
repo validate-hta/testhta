@@ -14,7 +14,8 @@ ce_markov(
   init_age = 55,
   s_names = NULL,
   t_names = NULL,
-  discount_rate = 0.035
+  discount_rate = 0.035,
+  ...
 )
 }
 \arguments{
@@ -37,6 +38,8 @@ ce_markov(
 \item{t_names}{Optional names for the treatments}
 
 \item{discount_rate}{The discount rate to apply to costs and QALYs}
+
+\item{...}{Additional arguments passed to p_matrix_cycle.}
 }
 \value{
 A list containing the population array, total life expectancy, total life-years,

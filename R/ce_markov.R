@@ -11,6 +11,8 @@
 #' @param s_names Optional names for the health states
 #' @param t_names Optional names for the treatments
 #' @param discount_rate The discount rate to apply to costs and QALYs
+#' @param ... Additional arguments passed to p_matrix_cycle.
+#' @importFrom stats setNames
 #' @return A list containing the population array, total life expectancy, total life-years,
 #' cycle costs, cycle QALYs, total costs, and total QALYs for each treatment
 #' @export
@@ -23,7 +25,8 @@ ce_markov <- function(start_pop,
                       init_age = 55,
                       s_names = NULL,
                       t_names = NULL,
-                      discount_rate = 0.035) {
+                      discount_rate = 0.035,
+                      ...) {
   
   n_states <- length(start_pop)
   n_treat <- dim(p_matrix)[3]
@@ -33,7 +36,7 @@ ce_markov <- function(start_pop,
                dimnames = list(state = s_names,
                                cycle = NULL,
                                treatment = t_names))
-  trans <- array(data = NA,
+  trans <- array(data = 0,
                  dim = c(n_states, n_cycles, n_treat),
                  dimnames = list(state = s_names,
                                  cycle = NULL,
@@ -59,13 +62,23 @@ ce_markov <- function(start_pop,
   total_LE <- setNames(rep(NA, n_treat), t_names)
   total_LYs <- setNames(rep(NA, n_treat), t_names)
   
+  df_state <- 1/(1 + discount_rate)^(1:n_cycles - 1)
+  df_trans <- 1/(1 + discount_rate)^(1:n_cycles - 2)
+  df_qaly <- 1/(1 + discount_rate)^(1:n_cycles - 1)
+  
+  if (discount_rate >= 1) {
+    df_state[] <- 0
+    df_qaly[] <- 0
+    df_trans[] <- 0
+  }
+
   for (i in 1:n_treat) {
     
     age <- init_age
     
     for (j in 2:n_cycles) {
       
-      p_matrix <- p_matrix_cycle(p_matrix, age, j - 1)
+      p_matrix <- p_matrix_cycle(p_matrix, age, j - 1, ...)
       
       # update population with matrix multiplication
       pop[, cycle = j, treatment = i] <-
@@ -78,27 +91,27 @@ ce_markov <- function(start_pop,
     }
     
     cycle_state_costs[i, ] <-
-      (state_c_matrix[treatment = i, ] %*% pop[, , treatment = i]) * 1/(1 + discount_rate)^(1:n_cycles - 1)
+      (state_c_matrix[treatment = i, ] %*% pop[, , treatment = i]) * df_state
     
     cycle_trans_costs[i, ] <-
-      (c(1,1,1) %*% trans[, , treatment = i]) * 1/(1 + discount_rate)^(1:n_cycles - 2)
+      (c(1,1,1) %*% trans[, , treatment = i]) * df_trans
     
     cycle_costs[i, ] <- cycle_state_costs[i, ] + cycle_trans_costs[i, ]
     
     LE[i, ] <- c(1,1,0) %*% pop[, , treatment = i]
     
-    LYs[i, ] <- LE[i, ] * 1/(1 + discount_rate)^(1:n_cycles - 1)
+    LYs[i, ] <- LE[i, ] * df_qaly
     
     cycle_QALE[i, ] <-
       state_q_matrix[treatment = i, ] %*%  pop[, , treatment = i]
     
-    cycle_QALYs[i, ] <- cycle_QALE[i, ] * 1/(1 + discount_rate)^(1:n_cycles - 1)
+    cycle_QALYs[i, ] <- cycle_QALE[i, ] * df_qaly
     
-    total_LE[i] <- sum(LE[treatment = i, -1])
-    total_LYs[i] <- sum(LYs[treatment = i, -1])
+    total_LE[i] <- sum(LE[treatment = i, ])
+    total_LYs[i] <- sum(LYs[treatment = i, ])
     
-    total_costs[i] <- sum(cycle_costs[treatment = i, -1])
-    total_QALYs[i] <- sum(cycle_QALYs[treatment = i, -1])
+    total_costs[i] <- sum(cycle_costs[treatment = i, ])
+    total_QALYs[i] <- sum(cycle_QALYs[treatment = i, ])
   }
   
   list(pop = pop,

@@ -6,6 +6,9 @@
 \usage{
 get_costs(res)
 }
+\arguments{
+\item{res}{A list of results returned by ce_markov.}
+}
 \description{
 Getter for costs
 }

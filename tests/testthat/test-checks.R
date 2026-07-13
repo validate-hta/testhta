@@ -28,13 +28,15 @@ test_that("QALY calculations", {
   
   # T02: QALYs with no discount (rate = 0) should equal Life Expectancy
   # (This assumes the utility/QoL weight for all alive states is 1)
-  test_run_t02 <- run_model(test_data, discount_rate = 0)
+  state_q_matrix_t02 <- test_data$state_q_matrix
+  state_q_matrix_t02[, c("Asymptomatic_disease", "Progressive_disease")] <- 1
+  test_run_t02 <- run_model(test_data, discount_rate = 0, state_q_matrix = state_q_matrix_t02)
   expect_equal(get_qalys(test_run_t02), get_le(test_run_t02))
   
   # T03: QALYs with standard discount should be less than undiscounted QALYs
   run_discounted <- run_model(test_data, discount_rate = 0.035)
   run_undiscounted <- run_model(test_data, discount_rate = 0)
-  expect_lt(get_qalys(run_discounted), get_qalys(run_undiscounted))
+  expect_true(all(get_qalys(run_discounted) < get_qalys(run_undiscounted)))
   
   # T04: If utility is 0, QALYs should be 0
   # (Assumes `run_model` can take parameter overrides)
@@ -60,7 +62,7 @@ test_that("Cost calculations", {
     test_run_t06 <- run_model(test_data, 
                               state_c_matrix = state_c_matrix_t06, 
                               trans_c_matrix = trans_c_matrix_t06)
-    expect_equal(get_costs(test_run_t06), rep(0, length(actual)), ignore_attr = TRUE)
+    expect_equal(as.numeric(get_costs(test_run_t06)), c(0, 0))
 
     # T07: Larger discount should be less than standard discount
     run_discounted_t07 <- run_model(test_data, discount_rate = 0.035)
@@ -85,7 +87,7 @@ test_that("Life Expectancy (LE) calculations", {
     p_matrix_t09 <- test_data$p_matrix*0
     p_matrix_t09[, "Dead", ] <- 1
     test_run_t09 <- run_model(test_data, p_matrix = p_matrix_t09)
-    expect_equal(get_le(test_run_t09), 1)
+    expect_equal(as.numeric(get_le(test_run_t09)), c(1, 1))
 
     # T10: If all transition probabilities to death are 0, LE is n_cycles
     # (Assuming `n_cycles` is an argument or in `test_data`)
@@ -95,5 +97,5 @@ test_that("Life Expectancy (LE) calculations", {
     test_run_t10 <- run_model(test_data,
                               p_matrix = p_matrix_t10,
                               n_cycles = n_cycles_test)
-    expect_equal(get_le(test_run_t10), n_cycles_test)
+    expect_equal(as.numeric(get_le(test_run_t10)), c(n_cycles_test, n_cycles_test))
 })

@@ -1,0 +1,18 @@
+#' Standard baseline parameters for cost-effectiveness testing
+#'
+#' A list containing the default setup for the cohort Markov model.
+#'
+#' @format A list with 10 elements:
+#' \describe{
+#'   \item{start_pop}{Initial population counts vector}
+#'   \item{p_matrix}{Transition probability 3D array}
+#'   \item{state_c_matrix}{State occupancy cost matrix}
+#'   \item{trans_c_matrix}{Transition cost matrix}
+#'   \item{state_q_matrix}{State utility matrix}
+#'   \item{n_cycles}{Number of model cycles}
+#'   \item{init_age}{Initial cohort age}
+#'   \item{s_names}{Health state names vector}
+#'   \item{t_names}{Treatment names vector}
+#'   \item{discount_rate}{Discount rate}
+#' }
+"test_data"

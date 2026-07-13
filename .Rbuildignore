@@ -1,2 +1,6 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^Validation_Testing_HE_Models_Tutorial\.pdf$
+^docs$
+^raw data$
+^scripts$
