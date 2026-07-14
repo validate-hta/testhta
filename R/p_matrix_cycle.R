@@ -74,8 +74,7 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
   return(p_matrix)
 }
 
-#' Look-up table for age-specific probabilities of death from non-disease causes
-#' 
+# Look-up table for age-specific probabilities of death from non-disease causes
 tpDn_lookup <- function() {
   c("(34,44]" = 0.0017,
     "(44,54]" = 0.0044,

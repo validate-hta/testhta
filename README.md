@@ -1,13 +1,27 @@
-# testhta
+# testhta <img src="man/figures/logo.png" align="right" height="139" alt="testhta logo" style="float:right;" />
 
-![Work In Progress](https://img.shields.io/badge/Status-Work%20In%20Progress-red)
-> This package is currently a prototype. Contributions and integration with wider HTA standards are welcome.
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/n8thangreen/testhta/workflows/R-CMD-check/badge.svg)](https://github.com/n8thangreen/testhta/actions)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Lifecycle: Experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
 
-**Custom validity checks for Health Technology Assessment (HTA) models in R.**
+**A Unit Testing and Verification Framework for Health Technology Assessment (HTA) Models**
 
-`testhta` provides a framework for applying software engineering best practices, specifically testing, to health economic modeling. By leveraging the [`testthat`]([https://testthat.r-lib.org/](https://testthat.r-lib.org/)) package, `testhta` helps modelers verify that their cost-effectiveness models behave as expected under specific conditions.
+`testhta` provides a robust, software-engineering-inspired framework for applying **unit testing** and **behavioral verification** to health economic and health technology assessment (HTA) models. By leveraging the [`testthat`](https://testthat.r-lib.org/) testing framework, `testhta` enables modelers to write automated checks that verify mathematical, logical, and structural correctness under boundary conditions. The package includes a built-in cohort Markov model as a demonstration environment, showing how to define, group, and execute these checks in practice.
 
-Ensuring model quality does not require you to be an expert programmer; it requires verifying that the model passes a defined set of logical and mathematical tests. This approach improves transparency, reproducibility, and confidence in HTA decision-making.
+Ensuring HTA model quality should not require manual spreadsheet audits. `testhta` makes verification automated, reproducible, and transparent—enhancing decision-maker confidence in cost-effectiveness results.
+
+---
+
+## Key Features
+
+- 🧪 **Verification Helpers**: Out-of-the-box functions to test model behavior against expected bounds (`check_model_qalys()`, `check_model_costs()`, `check_model_le()`).
+- 🔄 **Relational Comparators**: Compare model behaviors across parameter spaces using `compare_model_runs()` (e.g., verifying that discounting reduces future values).
+- 🔗 **Tidy Test API**: Modify parameters cleanly using setter functions (`set_discount_rate()`, `set_time_horizon()`) integrated with the base R pipe (`|>`) to isolate test runs.
+- ⚙️ **Markov Engine Example Case Study**: An example discrete-time cohort Markov simulation environment built with time-dependent transitions, discounting, and state/transition-specific costs and utilities to demonstrate the test framework.
+
+---
 
 ## Installation
 
@@ -18,83 +32,91 @@ You can install the development version of `testhta` from GitHub:
 devtools::install_github("n8thangreen/testhta")
 ```
 
-## Quick Start: A Basic Example
+---
 
-Below is a basic example of how to implement a validity check.
+## Quick Start: Build, Run, and Verify
 
-In this scenario, we test the **economic logic of discounting**. We expect that total QALYs calculated with a positive discount rate (e.g., 3.5%) should be strictly *lower* than QALYs calculated with no discounting (0%), provided the model runs for more than one cycle.
+Here is a basic example demonstrating how to run a cohort Markov model and verify the economic logic of discounting using the tidy API.
 
-First, set up the model with the baseline input parameters using a simple wrapper function.
+### 1. Set Up and Run the Model
+
+We use the package's built-in baseline dataset `test_data` to execute a cost-effectiveness model.
 
 ```r
 library(testhta)
-library(testthat)
 
-# (See scripts/run_markov_model.R for the underlying model logic)
-run_my_model <- function(discount_rate) {
-  # This calls the core Markov function included in the package
-  ce_markov(
-    start_pop = c(1000, 0, 0),
-    p_matrix = array(c(0.8, 0.1, 0.1, 0.7, 0.2, 0.1, 0, 0, 1, 
-                       0.8, 0.1, 0.1, 0.7, 0.2, 0.1, 0, 0, 1), 
-                     dim = c(3, 3, 2)), # Simplified transition matrix
-    state_c_matrix = matrix(c(500, 3000, 0, 1500, 3000, 0), nrow = 2, byrow = TRUE),
-    trans_c_matrix = matrix(0, nrow = 3, ncol = 3),
-    state_q_matrix = matrix(c(0.95, 0.75, 0, 0.95, 0.75, 0), nrow = 2, byrow = TRUE),
-    n_cycles = 15,
-    discount_rate = discount_rate
-  )
-}
+# Load baseline dataset
+data(test_data)
+
+# Run the Markov simulation
+results <- run_model(test_data)
+
+# Extract key HTA outputs using getters
+get_qalys(results)
+#>   without_drug      with_drug 
+#>       11.45892       12.12450 
+
+get_costs(results)
+#>   without_drug      with_drug 
+#>       22354.21       34211.55 
+
+get_icer(results)
+#> [1] 17814.77
 ```
 
-Next we perform some unit tests to verify discounting logic.
+### 2. Modify Parameters with Pipe Setters
+
+Easily perform scenario analyses or sensitivity sweeps by piping parameter modifications:
 
 ```r
-test_that("Discounted QALYs are lower than undiscounted QALYs", {
-  
-  # Run model with standard discounting (3.5%)
-  results_discounted <- run_my_model(discount_rate = 0.035)
-  
-  # Run model with NO discounting (0%)
-  results_undiscounted <- run_my_model(discount_rate = 0.0)
-  
-  # Extract the total QALYs (using the package getter or direct list access)
-  qaly_discounted <- get_qalys(results_discounted)
-  qaly_undiscounted <- get_qalys(results_undiscounted)
-  
-  # Expectation: Discounted value must be less than Undiscounted value
-  expect_lt(qaly_discounted["without_drug"], qaly_undiscounted["without_drug"])
-  expect_lt(qaly_discounted["with_drug"], qaly_undiscounted["with_drug"])
-})
+# Evaluate a 10-year time horizon with no discounting
+scenario_results <- test_data |>
+  set_time_horizon(10) |>
+  set_discount_rate(0) |>
+  run_model()
+
+get_icer(scenario_results)
+#> [1] 12903.45
 ```
 
-## Testing Strategy
+### 3. Automated Validation Assertions
 
-This package implements the validation framework discussed in our [HTA in R Manifesto](https://github.com/StatisticsHealthEconomics/HTAinRmanifesto) and Tappenden et al (2014). The tests focus on black-box verification of model outputs rather than internal code inspection.
+`testhta` provides assertion functions that integrate seamlessly into standard R package tests (using `testthat`). 
 
-Common test cases included in this framework:
+```r
+library(testthat)
 
-* **QALY Estimation:**
-    * Set discount rate to 0 $\rightarrow$ QALYs should equal Life Expectancy (if utility = 1).
-    * Set discount rate to $\infty$ $\rightarrow$ Future QALYs tend toward zero.
-    * Set all utilities to 0 $\rightarrow$ Total QALYs should be 0.
-* **Cost Estimation:**
-    * Set intervention costs to 0 $\rightarrow$ Incremental Cost-Effectiveness Ratio (ICER) decreases.
-    * Discounted costs should be $<$ Undiscounted costs.
-* **Clinical Trajectory:**
-    * Sum of probabilities in any state at any timepoint must equal 1.0.
-    * Relative risks/Hazard ratios set to 1.0 $\rightarrow$ Outcomes should be identical between arms.
-* **PSA & Statistical:**
-    * Sampled parameter values must fall within defined distribution ranges (e.g., probabilities between 0 and 1).
+# Verify that QALYs with standard discounting (3.5%) are strictly less 
+# than QALYs without discounting
+compare_model_runs(
+  extractor_fn = get_qalys,
+  comparison_fn = expect_lt,
+  params_1 = list(discount_rate = 0.035),
+  params_2 = list(discount_rate = 0),
+  data = test_data,
+  label = "Discounted QALYs are lower than undiscounted QALYs"
+)
+```
 
-For a full list of defined test cases, see the [Test Case Definition List](raw%20data/test_case_example.csv).
+---
+
+## The HTA Verification Framework
+
+The validation checks in `testhta` are based on formal software verification methodologies described by Tappenden et al. (2014) and Elbasha & Dasbach (2017). The framework checks "black-box" model behavior under extreme inputs to identify structural bugs:
+
+| Test Case | Boundary Condition | Expected Behavior | Verification Helper |
+| :--- | :--- | :--- | :--- |
+| **QALY Zeroing** | Set all utilities to `0` | QALYs must equal `0` | `check_model_qalys(0, ...)` |
+| **QALY Upper Bound** | Set utilities to `1`, discount to `0` | QALYs must equal Life Expectancy | `expect_equal(get_qalys(r), get_le(r))` |
+| **Discount Sensitivity** | High discount rate vs Low discount rate | High discount rate must yield lower values | `compare_model_runs(..., expect_lt)` |
+| **Absorbing States** | Transition to death state set to `1` | Life Expectancy must equal `1` cycle | `check_model_le(1, ...)` |
+| **No-Death Horizon** | Transition to death state set to `0` | Life Expectancy must equal `n_cycles` | `check_model_le(n_cycles, ...)` |
+| **Zero-Cost Bounding** | Set all costs to `0` | Total costs must equal `0` | `check_model_costs(0, ...)` |
+
+---
 
 ## References
 
-The methodology for these tests is based on the following literature:
-
-1.  **Dasbach, E.J., Elbasha, E.H.** (2017). Verification of Decision-Analytic Models for Health Economic Evaluations: An Overview. *PharmacoEconomics* 35, 673–683. [10.1007/s40273-017-0508-2](https://doi.org/10.1007/s40273-017-0508-2)
-2.  **Alarid-Escudero, F., et al.** (2019). A Need for Change! A Coding Framework for Improving Transparency in Decision Modeling. *PharmacoEconomics*, 37(11), 1329–1339. [10.1007/s40273-019-00837-x](https://doi.org/10.1007/s40273-019-00837-x)
-3.  **McCabe, C., & Dixon, S.** (2000). Testing the validity of cost-effectiveness models. *PharmacoEconomics*, 17(5), 501–513. [10.2165/00019053-200017050-00007](https://doi.org/10.2165/00019053-200017050-00007)
-4.  **Husereau, D., et al.** (2013). Consolidated Health Economic Evaluation Reporting Standards (CHEERS) statement. *European Journal of Health Economics*, 14(3), 367–372. [10.1007/s10198-013-0471-6](https://doi.org/10.1007/s10198-013-0471-6)
-5.  **Tappenden, P., Chilcott, J.B.** (2014). Avoiding and Identifying Errors and Other Threats to the Credibility of Health Economic Models. *PharmacoEconomics* 32, 967–979. [10.1007/s40273-014-0186-2](https://doi.org/10.1007/s40273-014-0186-2)
+1. **Tappenden, P., & Chilcott, J. B.** (2014). Avoiding and Identifying Errors and Other Threats to the Credibility of Health Economic Models. *PharmacoEconomics*, 32, 967–979. [https://doi.org/10.1007/s40273-014-0186-2](https://doi.org/10.1007/s40273-014-0186-2)
+2. **Elbasha, E. H., & Dasbach, E. J.** (2017). Verification of Decision-Analytic Models for Health Economic Evaluations: An Overview. *PharmacoEconomics*, 35, 673–683. [https://doi.org/10.1007/s40273-017-0508-2](https://doi.org/10.1007/s40273-017-0508-2)
+3. **Alarid-Escudero, F., et al.** (2019). A Need for Change! A Coding Framework for Improving Transparency in Decision Modeling. *PharmacoEconomics*, 37(11), 1329–1339. [https://doi.org/10.1007/s40273-019-00837-x](https://doi.org/10.1007/s40273-019-00837-x)

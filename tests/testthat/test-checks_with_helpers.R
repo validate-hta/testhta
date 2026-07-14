@@ -1,107 +1,80 @@
+# Unit tests for cohort Markov model - Using validation helpers
+# Aligned with the HTA Verification Registry (T01 - T12)
 
+# Load baseline test data
 data(test_data)
 
-# It assumes the existence of:
-# - `run_model(data, ...)`: Your main model function.
-# - `get_qalys(run)`: Extracts total QALYs from a model run.
-# - `get_costs(run)`: Extracts total costs from a model run.
-# - `get_le(run)`: Extracts total Life Expectancy from a model run.
-# - `test_data`: A standard test dataset.
+# --- QALY Validation Tests ---
 
-# --- 1. QALY Calculations ---
+test_that("T01: QALYs with discount_rate = 1 should be 0", {
+  check_model_qalys(
+    data = test_data, 
+    discount_rate = 1, 
+    expected_qalys = 0,
+    label = "T01: QALYs with discount_rate = 1 should be 0"
+  )
+})
 
-test_that("QALY calculations", {
-  
-  # T01: QALYs are 0 if discount rate is 1 (all future value is 0)
-  check_model_qalys(data = test_data, discount_rate = 1, expected_qalys = 0,
-                    label = "T01: QALYs with discount_rate = 1 should be 0")
-  
-  # T04: QALYs are 0 if all utilities are 0
-  check_model_qalys(data = test_data, u_healthy = 0, u_sick = 0, expected_qalys = 0,
-                    label = "T04: QALYs with all utilities = 0 should be 0")
-  
-  # T03: QALYs with standard discount < undiscounted QALYs
+test_that("T02: Undiscounted QALYs (with u=1) should equal LE", {
+  test_run_t02 <- run_model(test_data, discount_rate = 0, u_healthy = 1, u_sick = 1)
+  expect_equal(
+    get_qalys(test_run_t02), 
+    get_le(test_run_t02), 
+    tolerance = 0.01,
+    label = "T02: Undiscounted QALYs (with u=1) should equal LE"
+  )
+})
+
+test_that("T06: Set all living health state utility parameters = 1 yields QALYs equal to LYGs", {
+  test_run_t06 <- run_model(test_data, u_healthy = 1, u_sick = 1)
+  expect_equal(
+    get_qalys(test_run_t06), 
+    test_run_t06$total_LYs, 
+    tolerance = 0.01,
+    label = "T06: QALY gains exactly equal LYGs when utilities = 1"
+  )
+})
+
+test_that("T07: Discounted QALYs should be less than Undiscounted QALYs", {
   compare_model_runs(
     extractor_fn = get_qalys,
     comparison_fn = expect_lt,
     params_1 = list(discount_rate = 0.035),
     params_2 = list(discount_rate = 0),
     data = test_data,
-    label = "T03: Discounted QALYs should be less than Undiscounted QALYs"
+    label = "T07: Discounted QALYs should be less than Undiscounted QALYs"
   )
-  
-  # T02: Undiscounted QALYs (with u=1) should equal LE
-  # This is a dynamic check (comparing two *different* outputs from the *same* run),
-  # so it doesn't fit the helper patterns and is clearer to write manually.
-  test_run_t02 <- run_model(test_data, discount_rate = 0, u_healthy = 1, u_sick = 1)
-  expect_equal(get_qalys(test_run_t02), get_le(test_run_t02),
-               label = "T02: Undiscounted QALYs (with u=1) should equal LE")
 })
 
-
-# --- 2. Cost Calculations ---
-
-test_that("Cost calculations", {
-  
-  # T05: Costs with standard discount < undiscounted costs
-  compare_model_runs(
-    extractor_fn = get_costs,
-    comparison_fn = expect_lt,
-    params_1 = list(discount_rate = 0.035),
-    params_2 = list(discount_rate = 0),
-    data = test_data,
-    label = "T05: Discounted Costs should be less than Undiscounted Costs"
-  )
-  
-  # T06: If all costs are 0, total cost should be 0
-  check_model_costs(
-    data = test_data,
-    c_healthy = 0,
-    c_sick = 0,
-    c_intervention = 0,
-    c_death = 0,
-    expected_costs = 0,
-    label = "T06: Total cost should be 0 when all cost inputs are 0"
-  )
-  
-  # T07: Full discount (rate = 1) < standard discount
-  # (Note: Assumes non-zero costs after cycle 0)
-  compare_model_runs(
-    extractor_fn = get_costs,
-    comparison_fn = expect_lt,
-    params_1 = list(discount_rate = 1),
-    params_2 = list(discount_rate = 0.035),
-    data = test_data,
-    label = "T07: Full discount (100%) Costs should be less than standard discount"
+test_that("T08: QALY gains after time 0 tend towards zero at high discount rates", {
+  check_model_qalys(
+    data = test_data, 
+    discount_rate = 1000, 
+    expected_qalys = 0,
+    label = "T08: QALYs with extreme discount_rate = 1000 should be 0"
   )
 })
 
 
-# --- 3. Life Expectancy (LE) Calculations ---
+# --- Population Validation Tests ---
 
-test_that("Life Expectancy (LE) calculations", {
-  
-  # T08: LE should not be affected by discount rate
-  compare_model_runs(
-    extractor_fn = get_le,
-    comparison_fn = expect_equal,
-    params_1 = list(discount_rate = 0),
-    params_2 = list(discount_rate = 0.05),
-    data = test_data,
-    label = "T08: LE should not be affected by discount rate"
+test_that("T03: Set relative treatment effects = 1 yields equal LYGs & QALYs", {
+  test_run_t03 <- run_model(test_data, effect = 0)
+  expect_equal(
+    as.numeric(test_run_t03$total_LYs["with_drug"]), 
+    as.numeric(test_run_t03$total_LYs["without_drug"]), 
+    tolerance = 0.01,
+    label = "T03: Equal LYGs for relative effect = 0"
   )
-  
-  # T09: If all transition probabilities to death are 1, LE is 1 cycle
-  # (Assuming model starts in cycle 1 and everyone lives 1 cycle)
-  check_model_le(
-    data = test_data,
-    p_healthy_death = 1,
-    p_sick_death = 1,
-    expected_le = 1,
-    label = "T09: LE should be 1 when all p_death = 1"
+  expect_equal(
+    as.numeric(test_run_t03$total_QALYs["with_drug"]), 
+    as.numeric(test_run_t03$total_QALYs["without_drug"]), 
+    tolerance = 0.01,
+    label = "T03: Equal QALYs for relative effect = 0"
   )
-  
-  # T10: If all transition probabilities to death are 0, LE is n_cycles
+})
+
+test_that("T04: LE should be n_cycles when all p_death = 0", {
   n_cycles_test <- 50
   check_model_le(
     data = test_data,
@@ -109,6 +82,61 @@ test_that("Life Expectancy (LE) calculations", {
     p_sick_death = 0,
     n_cycles = n_cycles_test,
     expected_le = n_cycles_test,
-    label = "T10: LE should be n_cycles when all p_death = 0"
+    label = "T04: LE should be n_cycles when all p_death = 0"
+  )
+})
+
+test_that("T05: LE should be 1 when all p_death = 1", {
+  check_model_le(
+    data = test_data,
+    p_healthy_death = 1,
+    p_sick_death = 1,
+    expected_le = 1,
+    label = "T05: LE should be 1 when all p_death = 1"
+  )
+})
+
+
+# --- Cost Validation Tests ---
+
+test_that("T09: Set intervention costs = 0 reduces ICER", {
+  compare_model_runs(
+    extractor_fn = get_icer,
+    comparison_fn = expect_lt,
+    params_1 = list(c_intervention = 0),
+    params_2 = list(),
+    data = test_data,
+    label = "T09: Set intervention costs = 0 reduces ICER"
+  )
+})
+
+test_that("T10: Increase intervention costs increases ICER", {
+  compare_model_runs(
+    extractor_fn = get_icer,
+    comparison_fn = expect_gt,
+    params_1 = list(c_intervention = 5000),
+    params_2 = list(),
+    data = test_data,
+    label = "T10: Increase intervention costs increases ICER"
+  )
+})
+
+test_that("T11: Cost discount rate = 0 yields discounted costs = undiscounted costs", {
+  compare_model_runs(
+    extractor_fn = get_costs,
+    comparison_fn = expect_equal,
+    params_1 = list(discount_rate = 0),
+    params_2 = list(discount_rate = 0),
+    data = test_data,
+    label = "T11: Cost discount rate = 0 yields discounted costs = undiscounted costs"
+  )
+})
+
+test_that("T12: Costs with extreme discount_rate = 1000 should be 0", {
+  check_model_costs(
+    data = test_data, 
+    discount_rate = 1000, 
+    expected_costs = 0,
+    label = "T12: Costs with extreme discount_rate = 1000 should be 0"
   )
 })

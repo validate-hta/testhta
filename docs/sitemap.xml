@@ -1,15 +1,29 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>/404.html</loc>
-  </url>
-  <url>
-    <loc>/authors.html</loc>
-  </url>
-  <url>
-    <loc>/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/index.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>https://n8thangreen.github.io/testhta/404.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/articles/basic-tests.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/articles/index.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/articles/introduction.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/articles/validation-guide.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/authors.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/index.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/news/index.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/ce_markov.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/check_model_costs.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/check_model_le.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/check_model_qalys.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/compare_model_runs.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/get_costs.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/get_icer.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/get_le.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/get_qalys.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/index.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/p_matrix_cycle.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/run_model.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/set_costs.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/set_discount_rate.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/set_p_matrix.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/set_time_horizon.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/set_utilities.html</loc></url>
+<url><loc>https://n8thangreen.github.io/testhta/reference/test_data.html</loc></url>
 </urlset>
+

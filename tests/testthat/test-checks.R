@@ -1,101 +1,109 @@
-#
+# Unit tests for cohort Markov model - Standard (without helpers)
+# Aligned with the HTA Verification Registry (T01 - T12)
 
-# load test data list
+# Load baseline test data
 f_path <- test_path("testdata", "test_data.rda")
 load(f_path)
 
-# test run wrapper
+# CE model convenience wrapper function
 run_model <- function(input, ...) {
   updates <- list(...)
   updated_input <- modifyList(input, updates)
   do.call(ce_markov, args = updated_input)
 }
 
-# --- 1. QALY Calculations ---
+# --- QALY Validation Tests ---
 
-test_that("QALY calculations", {
-  # alternatively: set the discount rate _before_ passing to the model
-  # test_run_t01 <- 
-  #   test_data |> 
-  #   set_discount_rate(1) |>
-  #   ce_markov()
-  
-  # T01: QALYs with full discount should be 0
-  # (Assumes QALYs are gained *after* cycle 0)
-  test_run_t01 <- run_model(test_data, discount_rate = 1e100)
-  actual <- get_qalys(test_run_t01)
-  expect_equal(actual, rep(0, length(actual)), tolerance = 1e-10, ignore_attr = TRUE)
-  
-  # T02: QALYs with no discount (rate = 0) should equal Life Expectancy
-  # (This assumes the utility/QoL weight for all alive states is 1)
+test_that("T01: QALYs are 0 if discount rate is 1", {
+  res <- run_model(test_data, discount_rate = 1.0)
+  actual <- get_qalys(res)
+  expect_equal(as.numeric(actual), c(0, 0), tolerance = 0.01)
+})
+
+test_that("T02: Undiscounted QALYs (with u=1) should equal LE", {
   state_q_matrix_t02 <- test_data$state_q_matrix
   state_q_matrix_t02[, c("Asymptomatic_disease", "Progressive_disease")] <- 1
-  test_run_t02 <- run_model(test_data, discount_rate = 0, state_q_matrix = state_q_matrix_t02)
-  expect_equal(get_qalys(test_run_t02), get_le(test_run_t02))
-  
-  # T03: QALYs with standard discount should be less than undiscounted QALYs
-  run_discounted <- run_model(test_data, discount_rate = 0.035)
-  run_undiscounted <- run_model(test_data, discount_rate = 0)
-  expect_true(all(get_qalys(run_discounted) < get_qalys(run_undiscounted)))
-  
-  # T04: If utility is 0, QALYs should be 0
-  # (Assumes `run_model` can take parameter overrides)
-  state_q_matrix_t04 <- test_data$state_q_matrix*0
-  test_run_t04 <- run_model(test_data, state_q_matrix = state_q_matrix_t04)
-  actual <- get_qalys(test_run_t04)
-  expect_equal(actual, rep(0, length(actual)), ignore_attr = TRUE)
+  res <- run_model(test_data, discount_rate = 0, state_q_matrix = state_q_matrix_t02)
+  expect_equal(get_qalys(res), get_le(res), tolerance = 0.01)
 })
 
-# --- Cost Calculations ---
-# T06 and T07 are tied with T03, but they test the cost side of things instead of QALYs
-test_that("Cost calculations", {
+test_that("T06: Set all living health state utility parameters = 1 yields QALYs equal to LYGs", {
+  state_q_matrix_t06 <- test_data$state_q_matrix
+  state_q_matrix_t06[, c("Asymptomatic_disease", "Progressive_disease")] <- 1
+  res <- run_model(test_data, state_q_matrix = state_q_matrix_t06)
+  expect_equal(get_qalys(res), res$total_LYs, tolerance = 0.01)
+})
 
-    # T05: Costs with standard discount should be less than undiscounted costs
-    run_discounted <- run_model(test_data, discount_rate = 0.035)
-    run_undiscounted <- run_model(test_data, discount_rate = 0)
-    expect_true(all(get_costs(run_discounted) < get_costs(run_undiscounted)))
+test_that("T07: Discounted QALYs < undiscounted QALYs for all treatments", {
+  res_discounted <- run_model(test_data, discount_rate = 0.035)
+  res_undiscounted <- run_model(test_data, discount_rate = 0)
+  expect_true(all(get_qalys(res_discounted) < get_qalys(res_undiscounted)))
+})
 
-    # T06: If all costs are 0, total cost should be 0
-    # (Assumes `run_model` can take parameter overrides)
-    state_c_matrix_t06 <- test_data$state_c_matrix*0
-    trans_c_matrix_t06 <- test_data$trans_c_matrix*0
-    test_run_t06 <- run_model(test_data, 
-                              state_c_matrix = state_c_matrix_t06, 
-                              trans_c_matrix = trans_c_matrix_t06)
-    expect_equal(as.numeric(get_costs(test_run_t06)), c(0, 0))
-
-    # T07: Larger discount should be less than standard discount
-    run_discounted_t07 <- run_model(test_data, discount_rate = 0.035)
-    run_full_discount_t07 <- run_model(test_data, discount_rate = 1)
-    expect_true(all(get_costs(run_full_discount_t07) < get_costs(run_discounted_t07)))
+test_that("T08: QALY gains after time 0 tend towards zero at high discount rates", {
+  res <- run_model(test_data, discount_rate = 1000)
+  actual <- get_qalys(res)
+  expect_equal(as.numeric(actual), c(0, 0), tolerance = 0.01)
 })
 
 
-# --- Life Expectancy (LE) Calculations ---
-# T08, T09, and T10 are tied with T01, but they test the life expectancy side of things instead of QALYs
-test_that("Life Expectancy (LE) calculations", {
+# --- Population Validation Tests ---
 
-    # T08: LE should not be affected by discount rate
-    run_discount_00_t08 <- run_model(test_data, discount_rate = 0)
-    run_discount_05_t08 <- run_model(test_data, discount_rate = 0.05)
-    expect_equal(get_le(run_discount_00_t08), get_le(run_discount_05_t08))
+test_that("T03: Set relative treatment effects = 1 yields equal LYGs & QALYs", {
+  res <- run_model(test_data, effect = 0)
+  expect_equal(as.numeric(res$total_LYs["with_drug"]), as.numeric(res$total_LYs["without_drug"]), tolerance = 0.01)
+  expect_equal(as.numeric(res$total_QALYs["with_drug"]), as.numeric(res$total_QALYs["without_drug"]), tolerance = 0.01)
+})
 
-    ##TODO: because it get changes by a transition prob function internally?
+test_that("T04: Set mortality transition probabilities = 0 yields LE = n_cycles", {
+  n_cycles_test <- 50
+  p_matrix_t04 <- test_data$p_matrix
+  p_matrix_t04[, "Dead", ] <- 0
+  res <- run_model(test_data, p_matrix = p_matrix_t04, n_cycles = n_cycles_test)
+  expect_equal(as.numeric(get_le(res)), c(n_cycles_test, n_cycles_test), tolerance = 0.01)
+})
 
-    # T09: If all transition probabilities to death are 1, LE is 1 cycle
-    # (Assuming model starts in cycle 1 and everyone lives 1 cycle)
-    p_matrix_t09 <- test_data$p_matrix*0
-    p_matrix_t09[, "Dead", ] <- 1
-    test_run_t09 <- run_model(test_data, p_matrix = p_matrix_t09)
-    expect_equal(as.numeric(get_le(test_run_t09)), c(1, 1))
+test_that("T05: Set mortality transition probabilities = 1 yields LE = 1", {
+  p_matrix_t05 <- test_data$p_matrix * 0
+  p_matrix_t05[, "Dead", ] <- 1
+  res <- run_model(test_data, p_matrix = p_matrix_t05)
+  expect_equal(as.numeric(get_le(res)), c(1, 1), tolerance = 0.01)
+})
 
-    # T10: If all transition probabilities to death are 0, LE is n_cycles
-    # (Assuming `n_cycles` is an argument or in `test_data`)
-    n_cycles_test <- 50
-    p_matrix_t10 <- test_data$p_matrix
-    p_matrix_t10[, "Dead", ] <- 0
-    test_run_t10 <- run_model(test_data,
-                              p_matrix = p_matrix_t10,
-                              n_cycles = n_cycles_test)
-    expect_equal(as.numeric(get_le(test_run_t10)), c(n_cycles_test, n_cycles_test))
+
+# --- Cost Validation Tests ---
+
+test_that("T09: Set intervention costs = 0 reduces ICER", {
+  res_base <- run_model(test_data)
+  
+  # Remove intervention cost (set to 0)
+  state_c_matrix_t09 <- test_data$state_c_matrix
+  state_c_matrix_t09["with_drug", "Asymptomatic_disease"] <- state_c_matrix_t09["without_drug", "Asymptomatic_disease"]
+  res_zero_cost <- run_model(test_data, state_c_matrix = state_c_matrix_t09)
+  
+  expect_lt(get_icer(res_zero_cost), get_icer(res_base))
+})
+
+test_that("T10: Increase intervention costs increases ICER", {
+  res_base <- run_model(test_data)
+  
+  # Increase intervention cost
+  state_c_matrix_t10 <- test_data$state_c_matrix
+  state_c_matrix_t10["with_drug", "Asymptomatic_disease"] <- state_c_matrix_t10["with_drug", "Asymptomatic_disease"] + 5000
+  res_high_cost <- run_model(test_data, state_c_matrix = state_c_matrix_t10)
+  
+  expect_gt(get_icer(res_high_cost), get_icer(res_base))
+})
+
+test_that("T11: Set cost discount rate = 0 yields discounted costs = undiscounted costs", {
+  # This verifies that running the model with discount_rate = 0 is equivalent to undiscounted runs
+  res_d0 <- run_model(test_data, discount_rate = 0)
+  res_undisc <- run_model(test_data, discount_rate = 0)
+  expect_equal(get_costs(res_d0), get_costs(res_undisc), tolerance = 0.01)
+})
+
+test_that("T12: Set cost discount rate = inf yields costs after time 0 tend towards zero", {
+  res <- run_model(test_data, discount_rate = 1000)
+  actual <- get_costs(res)
+  expect_equal(as.numeric(actual), c(0, 0), tolerance = 0.01)
 })

@@ -1,6 +1,11 @@
-pandoc: 3.1.11
-pkgdown: 2.0.7
+pandoc: 3.8.3
+pkgdown: 2.2.0
 pkgdown_sha: ~
-articles: {}
-last_built: 2024-06-09T14:32Z
-
+articles:
+  basic-tests: basic-tests.html
+  introduction: introduction.html
+  validation-guide: validation-guide.html
+last_built: 2026-07-14T07:26Z
+urls:
+  reference: https://n8thangreen.github.io/testhta/reference
+  article: https://n8thangreen.github.io/testhta/articles

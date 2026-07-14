@@ -1,0 +1,48 @@
+url: https://n8thangreen.github.io/testhta/
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [github]
+  components:
+    intro:
+      text: "Get Started"
+      href: articles/introduction.html
+    articles:
+      text: "Guides"
+      menu:
+        - text: "Writing Basic Bounding Tests"
+          href: articles/basic-tests.html
+        - text: "HTA Model Bounding & Validation"
+          href: articles/validation-guide.html
+
+reference:
+  - title: "Model Validation & Verification Helpers"
+    desc: "Exported assertion functions to write automated unit tests and check model boundaries."
+    contents:
+      - run_model
+      - check_model_qalys
+      - check_model_costs
+      - check_model_le
+      - compare_model_runs
+  - title: "Model Setters & Getters"
+    desc: "Helper functions to modify input parameters and extract outcomes during test execution."
+    contents:
+      - set_discount_rate
+      - set_costs
+      - set_p_matrix
+      - set_utilities
+      - set_time_horizon
+      - get_qalys
+      - get_costs
+      - get_le
+      - get_icer
+  - title: "Example Case Study Model"
+    desc: "The cohort Markov model engine used as the demonstration environment for these testing tools."
+    contents:
+      - ce_markov
+      - p_matrix_cycle
+      - test_data

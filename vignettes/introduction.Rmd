@@ -1,0 +1,111 @@
+---
+title: "Introduction to testhta"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to testhta}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(testhta)
+```
+
+`testhta` provides a software-engineering-inspired framework for building and validating Health Technology Assessment (HTA) cost-effectiveness models in R. By combining cohort Markov models with structured unit tests, it ensures model transparency, correctness, and reproducibility.
+
+This vignette covers:
+1. Setting up a Markov model.
+2. Running the model under baseline parameters.
+3. Accessing model outputs using getters.
+
+## 1. The HTA Markov Model Setup
+
+The core function in `testhta` is `ce_markov()`, which runs a cohort Markov model. The model expects:
+- `start_pop`: Initial counts of the cohort across health states.
+- `p_matrix`: A 3-dimensional array of transition probabilities (states $\times$ states $\times$ treatments).
+- `state_c_matrix`: A matrix of costs for state occupancy.
+- `trans_c_matrix`: A matrix of costs incurred during state transitions.
+- `state_q_matrix`: A matrix of quality-of-life weights (utilities) for each state.
+
+The package includes a built-in baseline dataset called `test_data`. Let's inspect its structure:
+
+```{r test_data}
+# Load baseline dataset
+data(test_data)
+names(test_data)
+```
+
+It contains:
+- `start_pop`: Vector of length 3 (Asymptomatic disease, Progressive disease, Dead)
+- `p_matrix`: $3 \times 3 \times 2$ array for `without_drug` and `with_drug`
+- `state_c_matrix`: State cost matrix for each treatment
+- `state_q_matrix`: Utility matrix for each treatment
+- `discount_rate`: Standard HTA discount rate (typically 3.5% or 0.035)
+- `n_cycles`: Time horizon of the model
+
+## 2. Running the Model
+
+We can run the model by passing `test_data` parameters directly to `ce_markov()`, or using the wrapper helper `run_model()`.
+
+Here is how you execute the Markov simulation:
+
+```{r run_model}
+# Run with the helper wrapper
+results <- run_model(test_data)
+```
+
+The output of `run_model()` is a list containing the population distributions, cycle-specific costs and QALYs, and summary metrics.
+
+## 3. Extracting Results using Getters
+
+`testhta` provides clean getter functions to extract the key outcomes from your model results:
+
+- `get_qalys()`: Extracts total Quality-Adjusted Life Years (QALYs).
+- `get_costs()`: Extracts total costs.
+- `get_le()`: Extracts total Life Expectancy (undiscounted life-years).
+- `get_icer()`: Calculates the Incremental Cost-Effectiveness Ratio (ICER) between the two arms.
+
+Let's retrieve these values from our results:
+
+```{r getters}
+# Get total QALYs
+get_qalys(results)
+
+# Get total Costs
+get_costs(results)
+
+# Get life expectancy
+get_le(results)
+
+# Calculate the ICER
+get_icer(results)
+```
+
+## 4. Parameter Modification with Setters
+
+The package provides setter functions that follow a tidy workflow using the base R pipe (`|>`). These allow you to easily modify input parameters for scenario or sensitivity analyses before running the model:
+
+- `set_discount_rate(input, discount_rate)`
+- `set_time_horizon(input, n_cycles)`
+- `set_costs(input, scenario, values)`
+- `set_utilities(input, scenario, values)`
+
+For example, to calculate the ICER with no discounting and a shorter time horizon (20 cycles):
+
+```{r piping}
+scenario_results <- test_data |>
+  set_discount_rate(0) |>
+  set_time_horizon(20) |>
+  run_model()
+
+get_icer(scenario_results)
+```
+
+This piping framework makes scenario analysis clean, readable, and less prone to copy-paste errors.

@@ -1,0 +1,149 @@
+# Model Validation and Verification Guide
+
+``` r
+
+library(testhta)
+library(testthat)
+```
+
+Health economic models are critical tools for healthcare
+decision-making, but their complexity makes them vulnerable to
+implementation errors. `testhta` provides a structured framework for
+model verification—ensuring that the mathematical and logical
+implementation of the model matches its conceptual specification.
+
+Rather than trying to read and manually inspect hundreds of lines of
+code, this package encourages modelers to write automated **unit tests**
+using the `testthat` framework to check model behavior under specific
+bounding conditions.
+
+This guide describes: 1. Core validation rules (test cases). 2. The
+testing helpers provided by `testhta`. 3. How to write validation tests
+for your own models.
+
+## 1. Core Model Validation Rules
+
+Several logical rules must hold true for any cost-effectiveness model.
+`testhta` facilitates writing assertions for these:
+
+- **Discounting**: Total QALYs and costs with standard discounting
+  (e.g., 3.5%) must be strictly lower than undiscounted QALYs and costs.
+- **Extreme Discounting**: If the discount rate is extremely high
+  (e.g. $`\infty`$), all future costs and QALYs should go to zero.
+- **Utility Bounding**: If state utilities are set to 0, total QALYs
+  must equal 0. If state utilities are set to 1 and the discount rate is
+  0, total QALYs must exactly equal life expectancy.
+- **Life Expectancy Consistency**: Life expectancy should not be
+  affected by changes to cost or utility values, nor should it change
+  with the discount rate.
+- **Absorbing States**: If transition probabilities to the death state
+  are 1, life expectancy must be exactly 1 cycle. If transition
+  probabilities to death are 0, life expectancy must equal the time
+  horizon (`n_cycles`).
+
+## 2. Using `testhta` Validation Helpers
+
+To make writing unit tests as readable and succinct as possible,
+`testhta` exports several test assertion helpers:
+
+### Bounding Value Checks
+
+These functions check model outcomes against a single expected value:
+
+- `check_model_qalys(expected_qalys, data, ...)`
+- `check_model_costs(expected_costs, data, ...)`
+- `check_model_le(expected_le, data, ...)`
+
+For example, to test that QALYs are exactly zero when the discount rate
+is set to 1 (100%):
+
+``` r
+
+data(test_data)
+
+check_model_qalys(
+  expected_qalys = 0,
+  data = test_data,
+  discount_rate = 1,
+  label = "QALYs are 0 under 100% discount rate"
+)
+```
+
+Or that life expectancy is exactly 1 cycle when death probability is 1:
+
+``` r
+
+check_model_le(
+  expected_le = 1,
+  data = test_data,
+  p_healthy_death = 1,
+  p_sick_death = 1,
+  label = "LE is 1 when death probability is 1"
+)
+```
+
+### Relational Comparisons
+
+Use
+[`compare_model_runs()`](https://n8thangreen.github.io/testhta/reference/compare_model_runs.md)
+to test that changing a parameter shifts model outcomes in the expected
+direction:
+
+- **Parameters**:
+  - `extractor_fn`: Function to get the outcome (e.g., `get_qalys`,
+    `get_costs`, `get_le`).
+  - `comparison_fn`: Comparison expectation (e.g., `expect_lt`,
+    `expect_gt`, `expect_equal`).
+  - `params_1`: List of parameter overrides for run 1.
+  - `params_2`: List of parameter overrides for run 2.
+  - `data`: Base dataset.
+
+To verify that discounting reduces total costs:
+
+``` r
+
+compare_model_runs(
+  extractor_fn = get_costs,
+  comparison_fn = expect_lt,
+  params_1 = list(discount_rate = 0.035), # Run 1: discounted
+  params_2 = list(discount_rate = 0),     # Run 2: undiscounted
+  data = test_data,
+  label = "Discounted costs are less than undiscounted costs"
+)
+```
+
+## 3. Integrating Validation into a Model Development Workflow
+
+When developing or modifying a health economic model, place your test
+files in the `tests/testthat/` directory of your R package.
+
+For example, create `tests/testthat/test-model_validation.R`:
+
+``` r
+
+library(testthat)
+library(testhta)
+
+data(test_data)
+
+test_that("economic logic holds for cohort markov model", {
+  # Discounting logic
+  compare_model_runs(get_qalys, expect_lt, list(discount_rate = 0.035), list(discount_rate = 0), test_data)
+  
+  # Life Expectancy logic
+  check_model_le(expected_le = 50, data = test_data, p_healthy_death = 0, p_sick_death = 0, n_cycles = 50)
+  
+  # Zero costs logic
+  check_model_costs(expected_costs = 0, data = test_data, c_healthy = 0, c_sick = 0, c_intervention = 0, c_death = 0)
+})
+```
+
+You can execute your tests at any point during development by running:
+
+``` r
+
+devtools::test()
+```
+
+This automates the verification process and acts as a safety net against
+accidental bugs when updating transitions, costs, or utility functions.
