@@ -29,7 +29,8 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
   tpDn <- tpDn_lookup()[age_grp]
   
   # Check if p_matrix was pre-configured with all 1 or all 0 for transitions from alive states to Dead
-  alive_states <- c("Asymptomatic_disease", "Progressive_disease")
+  alive_states <- c("Asymptomatic", "Progressive")
+  
   if (all(p_matrix[alive_states, "Dead", ] == 1)) {
     p_healthy_death <- 1
     p_sick_death <- 1
@@ -50,8 +51,8 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
   }
 
   # Determine treatment effect for without_drug and with_drug based on input p_matrix
-  p_without <- p_matrix["Asymptomatic_disease", "Progressive_disease", "without_drug"]
-  p_with <- p_matrix["Asymptomatic_disease", "Progressive_disease", "with_drug"]
+  p_without <- p_matrix["Asymptomatic", "Progressive", "without_drug"]
+  p_with <- p_matrix["Asymptomatic", "Progressive", "with_drug"]
   
   if (isTRUE(all.equal(p_without, p_with))) {
     eff_without <- 0
@@ -73,20 +74,20 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
   }
 
   # Matrix containing transition probabilities for without_drug
-  p_matrix["Asymptomatic_disease", "Progressive_disease", "without_drug"] <- tpProg_cycle_without
-  p_matrix["Asymptomatic_disease", "Dead", "without_drug"] <- tpDn
-  p_matrix["Asymptomatic_disease", "Asymptomatic_disease", "without_drug"] <- 1 - tpProg_cycle_without - tpDn
-  p_matrix["Progressive_disease", "Dead", "without_drug"] <- tpProg_dead_without
-  p_matrix["Progressive_disease", "Progressive_disease", "without_drug"] <- 1 - tpProg_dead_without
+  p_matrix["Asymptomatic", "Progressive", "without_drug"] <- tpProg_cycle_without
+  p_matrix["Asymptomatic", "Dead", "without_drug"] <- tpDn
+  p_matrix["Asymptomatic", "Asymptomatic", "without_drug"] <- 1 - tpProg_cycle_without - tpDn
+  p_matrix["Progressive", "Dead", "without_drug"] <- tpProg_dead_without
+  p_matrix["Progressive", "Progressive", "without_drug"] <- 1 - tpProg_dead_without
   p_matrix["Dead", "Dead", "without_drug"] <- 1
   
   # Matrix containing transition probabilities for with_drug
-  p_matrix["Asymptomatic_disease", "Progressive_disease", "with_drug"] <- tpProg_cycle_with
-  p_matrix["Asymptomatic_disease", "Dead", "with_drug"] <- tpDn
-  p_matrix["Asymptomatic_disease", "Asymptomatic_disease", "with_drug"] <-
+  p_matrix["Asymptomatic", "Progressive", "with_drug"] <- tpProg_cycle_with
+  p_matrix["Asymptomatic", "Dead", "with_drug"] <- tpDn
+  p_matrix["Asymptomatic", "Asymptomatic", "with_drug"] <-
     1 - tpProg_cycle_with - tpDn
-  p_matrix["Progressive_disease", "Dead", "with_drug"] <- tpProg_dead_with
-  p_matrix["Progressive_disease", "Progressive_disease", "with_drug"] <- 1 - tpProg_dead_with
+  p_matrix["Progressive", "Dead", "with_drug"] <- tpProg_dead_with
+  p_matrix["Progressive", "Progressive", "with_drug"] <- 1 - tpProg_dead_with
   p_matrix["Dead", "Dead", "with_drug"] <- 1
   
   return(p_matrix)

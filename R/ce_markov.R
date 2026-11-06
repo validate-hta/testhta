@@ -4,7 +4,6 @@
 #' @param start_pop A vector of initial population counts for each health state
 #' @param p_matrix A 3D array of transition probabilities for each treatment
 #' @param state_c_matrix A matrix of state costs for each treatment
-#' @param trans_c_matrix A matrix of transition costs for each treatment
 #' @param state_q_matrix A matrix of state utilities for each treatment
 #' @param n_cycles The number of cycles to run the model for
 #' @param init_age The initial age of the population
@@ -23,7 +22,6 @@
 ce_markov <- function(start_pop,
                       p_matrix,
                       state_c_matrix,
-                      trans_c_matrix,
                       state_q_matrix,
                       n_cycles = 46,
                       init_age = 55,
@@ -34,18 +32,15 @@ ce_markov <- function(start_pop,
   
   n_states <- length(start_pop)
   n_treat <- dim(p_matrix)[3]
+  if (is.null(s_names)) s_names <- dimnames(p_matrix)[[1]]
+  if (is.null(t_names)) t_names <- dimnames(p_matrix)[[3]]
   
   pop <- array(data = NA,
                dim = c(n_states, n_cycles, n_treat),
                dimnames = list(state = s_names,
                                cycle = NULL,
                                treatment = t_names))
-  trans <- array(data = 0,
-                 dim = c(n_states, n_cycles, n_treat),
-                 dimnames = list(state = s_names,
-                                 cycle = NULL,
-                                 treatment = t_names))
-  
+
   for (i in 1:n_states) {
     pop[i, cycle = 1, ] <- start_pop[i]
   }
@@ -56,7 +51,6 @@ ce_markov <- function(start_pop,
           dimnames = list(treatment = t_names,
                           cycle = NULL))
   
-  cycle_state_costs <- cycle_trans_costs <- cycle_empty_array
   cycle_costs <- cycle_QALYs <- cycle_empty_array
   LE <- LYs <- cycle_empty_array    # life expectancy; life-years
   cycle_QALE <- cycle_empty_array   # quality-adjusted life expectancy
@@ -88,19 +82,11 @@ ce_markov <- function(start_pop,
       pop[, cycle = j, treatment = i] <-
         pop[, cycle = j - 1, treatment = i] %*% p_matrix[, , treatment = i]
       
-      trans[, cycle = j, treatment = i] <-
-        pop[, cycle = j - 1, treatment = i] %*% (trans_c_matrix * p_matrix[, , treatment = i])
-      
       age <- age + 1
     }
     
-    cycle_state_costs[i, ] <-
+    cycle_costs[i, ] <-
       (state_c_matrix[treatment = i, ] %*% pop[, , treatment = i]) * df_state
-    
-    cycle_trans_costs[i, ] <-
-      (c(1,1,1) %*% trans[, , treatment = i]) * df_trans
-    
-    cycle_costs[i, ] <- cycle_state_costs[i, ] + cycle_trans_costs[i, ]
     
     LE[i, ] <- c(1,1,0) %*% pop[, , treatment = i]
     
