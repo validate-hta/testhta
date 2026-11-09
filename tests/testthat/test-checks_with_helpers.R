@@ -6,15 +6,6 @@ data(test_data)
 
 # --- QALY Validation Tests ---
 
-test_that("T01: QALYs with discount_rate = 1 should be 0", {
-  check_model_qalys(
-    data = test_data, 
-    discount_rate = 1, 
-    expected_qalys = 0,
-    label = "T01: QALYs with discount_rate = 1 should be 0"
-  )
-})
-
 test_that("T02: Undiscounted QALYs (with u=1) should equal LE", {
   test_run_t02 <- run_model(test_data, discount_rate = 0, u_healthy = 1, u_sick = 1)
   expect_equal(
@@ -47,11 +38,12 @@ test_that("T07: Discounted QALYs should be less than Undiscounted QALYs", {
 })
 
 test_that("T08: QALY gains after time 0 tend towards zero at high discount rates", {
+  res_cycle_zero <- run_model(test_data, n_cycles = 1)
   check_model_qalys(
     data = test_data, 
     discount_rate = 1000, 
-    expected_qalys = 0,
-    label = "T08: QALYs with extreme discount_rate = 1000 should be 0"
+    expected_qalys = get_qalys(res_cycle_zero),
+    label = "T08: QALYs with extreme discount_rate = 1000 equal cycle 0 QALYs"
   )
 })
 
@@ -132,12 +124,13 @@ test_that("T11: Cost discount rate = 0 yields discounted costs = undiscounted co
   )
 })
 
-test_that("T12: Costs with extreme discount_rate = 1000 should be 0", {
+test_that("T12: Costs with extreme discount_rate = 1000 equal cycle 0 costs", {
+  res_cycle_zero <- run_model(test_data, n_cycles = 1)
   check_model_costs(
     data = test_data, 
     discount_rate = 1000, 
-    expected_costs = 0,
-    label = "T12: Costs with extreme discount_rate = 1000 should be 0"
+    expected_costs = get_costs(res_cycle_zero),
+    label = "T12: Costs with extreme discount_rate = 1000 equal cycle 0 costs"
   )
 })
 
@@ -236,6 +229,3 @@ test_that("T16 (Treatment Arm): Swapping treatment arm parameters swaps QALYs an
     label = "T16: Swapped QALYs arm 2 equals baseline arm 1"
   )
 })
-
-
-

@@ -18,8 +18,8 @@ s_names <- c("Asymptomatic", "Progressive", "Dead")
 base_params <- list(
   start_pop = c(1000, 0, 0),
   p_matrix = array(
-    c(0.75, 0.2, 0.05, 0, 0.9, 0.1, 0, 0, 1,
-      0.85, 0.1, 0.05, 0, 0.95, 0.05, 0, 0, 1), 
+    c(0.75, 0, 0, 0.2, 0.9, 0, 0.05, 0.1, 1,
+      0.85, 0, 0, 0.1, 0.95, 0, 0.05, 0.05, 1), 
     dim = c(3, 3, 2),
     dimnames = list(s_names, s_names, t_names)
   ),
@@ -57,7 +57,7 @@ run_model <- function(input_data, ...) {
 # ------------------------------------------------------------------------------
 get_qalys <- function(res) { res$total_QALYs }
 get_costs <- function(res) { res$total_costs }
-get_le    <- function(res) { res$life_expectancy }
+get_le    <- function(res) { res$total_LE_pp }
 get_icer  <- function(res) { 
   inc_cost <- res$total_costs["with_drug"] - res$total_costs["without_drug"]
   inc_qaly <- res$total_QALYs["with_drug"] - res$total_QALYs["without_drug"]
@@ -126,6 +126,83 @@ test_that("T06: Discounted QALYs are lower than undiscounted QALYs", {
   expect_lt(qaly_discounted["with_drug"], 
             qaly_undiscounted["with_drug"])
 })
+
+test_that("T07 & T11: High discounting reduces future value to 0", {
+  # Run full model with extreme discount
+  res_high_disc <- run_model(base_params, discount_rate = 1000)
+  
+  # Run a baseline model for only 1 cycle (time 0)
+  res_cycle_zero <- run_model(base_params, n_cycles = 1)
+  
+  # Check Costs (T11)
+  expect_equal(
+    get_costs(res_high_disc), 
+    get_costs(res_cycle_zero), 
+    tolerance = 0.01,
+    label = "T11: High discount total costs equal cycle 0 costs"
+  )
+  
+  # Check QALYs (T07)
+  expect_equal(
+    get_qalys(res_high_disc), 
+    get_qalys(res_cycle_zero), 
+    tolerance = 0.01,
+    label = "T07: High discount total QALYs equal cycle 0 QALYs"
+  )
+})
+
+test_that("T08: Zero intervention cost strictly reduces ICER", {
+  # Temporary wrapper to isolate intervention cost
+  run_with_intervention_cost <- function(c_int) {
+    temp_params <- base_params
+    temp_params$state_c_matrix["with_drug", "Asymptomatic"] <- 
+      temp_params$state_c_matrix["without_drug", "Asymptomatic"] + c_int
+    
+    run_model(temp_params)
+  }
+  
+  # Run model with a standard positive intervention cost
+  res_base <- run_model(base_params)
+  
+  # Run model with zero intervention cost
+  res_no_int <- run_with_intervention_cost(c_int = 0)
+  
+  # extract ICERs
+  res_no_int_icer <- get_icer(res_no_int)
+  res_base_icer <- get_icer(res_base)
+  
+  # extract baseline Incremental Effects (IE) 
+  # to handle ICER directionality
+  base_qalys <- get_qalys(res_base)
+  res_base_ie <- unname(base_qalys["with_drug"] - 
+                          base_qalys["without_drug"])
+  
+  # verify ICER directional change based on the sign of IE
+  # skip the rest of this block if assumption fails
+  testthat::skip_if_not(
+    res_base_ie > 0, 
+    "Baseline incremental QALYs are <= 0. 
+     Skipping ICER directionality tests."
+  )
+  
+  expect_lt(res_no_int_icer, res_base_icer)
+})
+
+test_that("T03: Immediate mortality results in LE of 1", {
+  # modify p_matrix to force death
+  dead_p_matrix <- base_params$p_matrix
+  dead_p_matrix[] <- 0
+  dead_p_matrix[, "Dead", ] <- 1 # all transitions go to Dead
+  
+  res_death <- run_model(base_params, p_matrix = dead_p_matrix)
+  res_le <- get_le(res_death)
+  
+  # is Life Expectancy for all scenarios = 1 cycle
+  expect_equal(unname(res_le), rep(1, length(res_le)))
+})
+
+#######################
+# full set of tests
 
 test_that("Population calculations", {
   

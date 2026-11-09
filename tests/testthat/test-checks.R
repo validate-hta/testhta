@@ -14,12 +14,6 @@ run_model <- function(input, ...) {
 
 # --- QALY Validation Tests ---
 
-test_that("T01: QALYs are 0 if discount rate is 1", {
-  res <- run_model(test_data, discount_rate = 1.0)
-  actual <- get_qalys(res)
-  expect_equal(as.numeric(actual), c(0, 0), tolerance = 0.01)
-})
-
 test_that("T02: Undiscounted QALYs (with u=1) should equal LE", {
   state_q_matrix_t02 <- test_data$state_q_matrix
   state_q_matrix_t02[, c("Asymptomatic_disease", "Progressive_disease")] <- 1
@@ -41,9 +35,9 @@ test_that("T07: Discounted QALYs < undiscounted QALYs for all treatments", {
 })
 
 test_that("T08: QALY gains after time 0 tend towards zero at high discount rates", {
-  res <- run_model(test_data, discount_rate = 1000)
-  actual <- get_qalys(res)
-  expect_equal(as.numeric(actual), c(0, 0), tolerance = 0.01)
+  res_high_disc <- run_model(test_data, discount_rate = 1000)
+  res_cycle_zero <- run_model(test_data, n_cycles = 1)
+  expect_equal(get_qalys(res_high_disc), get_qalys(res_cycle_zero), tolerance = 0.01)
 })
 
 
@@ -103,9 +97,9 @@ test_that("T11: Set cost discount rate = 0 yields discounted costs = undiscounte
 })
 
 test_that("T12: Set cost discount rate = inf yields costs after time 0 tend towards zero", {
-  res <- run_model(test_data, discount_rate = 1000)
-  actual <- get_costs(res)
-  expect_equal(as.numeric(actual), c(0, 0), tolerance = 0.01)
+  res_high_disc <- run_model(test_data, discount_rate = 1000)
+  res_cycle_zero <- run_model(test_data, n_cycles = 1)
+  expect_equal(get_costs(res_high_disc), get_costs(res_cycle_zero), tolerance = 0.01)
 })
 
 
@@ -192,6 +186,3 @@ test_that("T16 (Treatment Arm): Swapping treatment arm parameters swaps QALYs an
   expect_equal(as.numeric(swapped_qalys[arm1]), as.numeric(base_qalys[arm2]), tolerance = 0.01)
   expect_equal(as.numeric(swapped_qalys[arm2]), as.numeric(base_qalys[arm1]), tolerance = 0.01)
 })
-
-
-

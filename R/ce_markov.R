@@ -63,26 +63,22 @@ ce_markov <- function(start_pop,
   df_state <- 1/(1 + discount_rate)^(1:n_cycles - 1)
   df_trans <- 1/(1 + discount_rate)^(1:n_cycles - 2)
   df_qaly <- 1/(1 + discount_rate)^(1:n_cycles - 1)
-  
-  if (discount_rate >= 1) {
-    df_state[] <- 0
-    df_qaly[] <- 0
-    df_trans[] <- 0
-  }
 
   for (i in 1:n_treat) {
     
     age <- init_age
     
-    for (j in 2:n_cycles) {
-      
-      p_matrix <- p_matrix_cycle(p_matrix, age, j - 1, ...)
-      
-      # update population with matrix multiplication
-      pop[, cycle = j, treatment = i] <-
-        pop[, cycle = j - 1, treatment = i] %*% p_matrix[, , treatment = i]
-      
-      age <- age + 1
+    if (n_cycles > 1) {
+      for (j in 2:n_cycles) {
+        
+        p_matrix <- p_matrix_cycle(p_matrix, age, j - 1, ...)
+        
+        # update population with matrix multiplication
+        pop[, cycle = j, treatment = i] <-
+          pop[, cycle = j - 1, treatment = i] %*% p_matrix[, , treatment = i]
+        
+        age <- age + 1
+      }
     }
     
     cycle_costs[i, ] <-
@@ -104,11 +100,17 @@ ce_markov <- function(start_pop,
     total_QALYs[i] <- sum(cycle_QALYs[treatment = i, ])
   }
   
+  n_pop <- sum(start_pop)
+  
   list(pop = pop,
        total_LE = total_LE,
        total_LYs = total_LYs,
+       total_LE_pp = total_LE / n_pop,
+       total_LYs_pp = total_LYs / n_pop,
        cycle_costs = cycle_costs,
        cycle_QALYs = cycle_QALYs,
        total_costs = total_costs,
-       total_QALYs = total_QALYs)
+       total_QALYs = total_QALYs,
+       total_costs_pp = total_costs / n_pop,
+       total_QALYs_pp = total_QALYs / n_pop)
 }
