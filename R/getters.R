@@ -18,6 +18,19 @@ get_qalys <- function(res, arm = NULL) {
   }
 }
 
+#' @title Getter for per-person QALYs
+#' @param res A list of results returned by ce_markov.
+#' @param arm Optional treatment arm name or index.
+#' @return A numeric vector of per-person QALYs by treatment, or a single numeric value if arm is specified.
+#' @export
+get_qalys_pp <- function(res, arm = NULL) {
+  if (is.null(arm)) {
+    res$total_QALYs_pp
+  } else {
+    res$total_QALYs_pp[arm]
+  }
+}
+
 #' @title Getter for costs
 #' @param res A list of results returned by ce_markov.
 #' @param arm Optional treatment arm name or index.
@@ -36,6 +49,19 @@ get_costs <- function(res, arm = NULL) {
   }
 }
 
+#' @title Getter for per-person costs
+#' @param res A list of results returned by ce_markov.
+#' @param arm Optional treatment arm name or index.
+#' @return A numeric vector of per-person costs by treatment, or a single numeric value if arm is specified.
+#' @export
+get_costs_pp <- function(res, arm = NULL) {
+  if (is.null(arm)) {
+    res$total_costs_pp
+  } else {
+    res$total_costs_pp[arm]
+  }
+}
+
 #' @title Getter for life expectancy (LE)
 #' @param res A list of results returned by ce_markov.
 #' @param arm Optional treatment arm name or index.
@@ -51,6 +77,19 @@ get_le <- function(res, arm = NULL) {
     res$total_LE
   } else {
     res$total_LE[arm]
+  }
+}
+
+#' @title Getter for per-person life expectancy (LE)
+#' @param res A list of results returned by ce_markov.
+#' @param arm Optional treatment arm name or index.
+#' @return A numeric vector of per-person life expectancy by treatment, or a single numeric value if arm is specified.
+#' @export
+get_le_pp <- function(res, arm = NULL) {
+  if (is.null(arm)) {
+    res$total_LE_pp
+  } else {
+    res$total_LE_pp[arm]
   }
 }
 
@@ -165,5 +204,3 @@ get_transition_matrix <- function(input, arm = NULL) {
     input$p_matrix[, , arm]
   }
 }
-
-
