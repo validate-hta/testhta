@@ -80,36 +80,28 @@ sample_psa_parameters <- function(n_sim = 1000, base_params = NULL) {
 check_model_qalys <- function(data, expected_qalys, ..., tolerance = NULL, label = NULL) {
   run <- run_model(data, ...)
   actual <- get_qalys(run)
-  if (length(expected_qalys) == 1) {
-    expected_qalys <- setNames(rep(expected_qalys, length(actual)), names(actual))
-  }
+  
   expect_equal(actual, expected_qalys, tolerance = tolerance, label = label)
 }
 
 check_model_costs <- function(data, expected_costs, ..., tolerance = NULL, label = NULL) {
   run <- run_model(data, ...)
   actual <- get_costs(run)
-  if (length(expected_costs) == 1) {
-    expected_costs <- setNames(rep(expected_costs, length(actual)), names(actual))
-  }
+
   expect_equal(actual, expected_costs, tolerance = tolerance, label = label)
 }
 
 check_model_le <- function(data, expected_le, ..., label = NULL) {
   run <- run_model(data, ...)
   actual <- get_le(run)
-  if (length(expected_le) == 1) {
-    expected_le <- setNames(rep(expected_le, length(actual)), names(actual))
-  }
+
   expect_equal(actual, expected_le, label = label)
 }
 
 check_model_le_pp <- function(data, expected_le, ..., label = NULL) {
   run <- run_model(data, ...)
   actual <- get_le_pp(run)
-  if (length(expected_le) == 1) {
-    expected_le <- setNames(rep(expected_le, length(actual)), names(actual))
-  }
+
   expect_equal(actual, expected_le, label = label)
 }
 
@@ -268,6 +260,7 @@ test_that("QALY calculations", {
   
   # T07: High QALY discount rate reduces totals to cycle 0
   res_cycle_zero <- run_model(base_params, n_cycles = 1)
+  
   check_model_qalys(
     data = base_params,
     discount_rate = 1000,
@@ -357,18 +350,29 @@ test_that("Population calculations", {
   n_cycles_test <- 50
   no_death_p_matrix <- base_params$p_matrix
   no_death_p_matrix[, "Dead", ] <- 0
+  
+  # Normalise all rows simultaneously
+  no_death_p_matrix <- prop.table(no_death_p_matrix, margin = c(1, 3))
+  
+  no_death_p_matrix["Dead", , ] <- 0
   no_death_p_matrix["Dead", "Dead", ] <- 1
+  
+  no_death_p_matrix <- array(
+    no_death_p_matrix,
+    dim = dim(base_params$p_matrix),
+    dimnames = dimnames(base_params$p_matrix)
+  )
   
   check_model_le_pp(
     data = base_params,
     p_matrix = no_death_p_matrix,
     n_cycles = n_cycles_test,
-    expected_le = n_cycles_test,
+    expected_le = setNames(c(n_cycles_test, n_cycles_test), t_names), 
     label = "T02: LE should be n_cycles when all p_death=0"
   )
   
   # T03: If all transition probabilities to death are 1, LE is 1 cycle
-  # (Note: LE expectation depends on within-cycle correction implementation)
+  # (LE expectation depends on within-cycle correction implementation)
   dead_p_matrix <- base_params$p_matrix
   dead_p_matrix[] <- 0
   dead_p_matrix[, "Dead", ] <- 1
@@ -376,7 +380,7 @@ test_that("Population calculations", {
   check_model_le_pp(
     data = base_params,
     p_matrix = dead_p_matrix,
-    expected_le = 1, 
+    expected_le = setNames(c(1,1), t_names), 
     label = "T03: LE should be 1 when all p_death=1"
   )
 })
