@@ -16,7 +16,7 @@ t_names <- c("without_drug", "with_drug")
 s_names <- c("Asymptomatic", "Progressive", "Dead")
 
 base_params <- list(
-  start_pop = c(1000, 0, 0),
+  start_pop = setNames(c(1000, 0, 0), s_names),
   p_matrix = array(
     c(0.75, 0, 0, 0.2, 0.9, 0, 0.05, 0.1, 1,
       0.85, 0, 0, 0.1, 0.95, 0, 0.05, 0.05, 1), 
