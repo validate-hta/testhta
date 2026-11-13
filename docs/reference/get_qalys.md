@@ -12,7 +12,8 @@ get_qalys(res, arm = NULL)
 
 - res:
 
-  A list of results returned by ce_markov.
+  A list of results returned by
+  [`ce_markov()`](https://validate-hta.github.io/testhta/reference/ce_markov.md).
 
 - arm:
 
@@ -21,17 +22,17 @@ get_qalys(res, arm = NULL)
 ## Value
 
 A numeric vector of total QALYs by treatment, or a single numeric value
-if arm is specified.
+if `arm` is specified.
 
 ## Examples
 
 ``` r
-data(test_data)
-res <- run_model(test_data)
+data(base_params)
+res <- run_model(base_params)
 get_qalys(res)
 #> without_drug    with_drug 
-#>     9.048517     9.589129 
+#>     8394.580     8981.496 
 get_qalys(res, "with_drug")
 #> with_drug 
-#>  9.589129 
+#>  8981.496 
 ```

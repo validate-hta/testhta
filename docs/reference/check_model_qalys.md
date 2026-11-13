@@ -5,10 +5,14 @@ Run model and check QALYs against an expected value
 ## Usage
 
 ``` r
-check_model_qalys(expected_qalys, ..., label = NULL)
+check_model_qalys(data, expected_qalys, ..., tolerance = NULL, label = NULL)
 ```
 
 ## Arguments
+
+- data:
+
+  Baseline input data list.
 
 - expected_qalys:
 
@@ -18,7 +22,11 @@ check_model_qalys(expected_qalys, ..., label = NULL)
 
   Arguments passed to
   [`run_model()`](https://validate-hta.github.io/testhta/reference/run_model.md)
-  (e.g., data, discount_rate).
+  (e.g., `discount_rate`).
+
+- tolerance:
+
+  Approximate equality tolerance.
 
 - label:
 
@@ -27,11 +35,17 @@ check_model_qalys(expected_qalys, ..., label = NULL)
 
 ## Value
 
-None, called for side effects (testthat assertion).
+None, called for side effects (`testthat` assertion).
 
 ## Examples
 
 ``` r
-data(test_data)
-check_model_qalys(0, data = test_data, u_healthy = 0, u_sick = 0)
+data(base_params)
+res_cycle_zero <- run_model(base_params, n_cycles = 1)
+check_model_qalys(
+  data = base_params,
+  expected_qalys = get_qalys(res_cycle_zero),
+  discount_rate = 1000,
+  tolerance = 0.01
+)
 ```

@@ -1,6 +1,6 @@
 ---
-title: "Validating HTA Models with Unit Tests"
-subtitle: "A guide to applying software engineering best practices to health economics"
+title: "Automated Verification for Health Economic Models in R"
+subtitle: "A hands-on guide to applying software engineering best practices with testhta"
 author: "Nathan Green"
 format:
   html:
@@ -15,237 +15,82 @@ format:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
-```{r ce_markov_defn}
-#| code-fold: true
-#| code-summary: "Mock cost-effectiveness model"
-
-# In a real scenario, you would load your package here:
-# library(testhta)
+```{r load-pkg}
 library(testthat)
+library(testhta)
 
-# --- MOCKING PACKAGE FUNCTIONS FOR THIS DOCUMENT TO RUN STANDALONE ---
-# Ideally, these are loaded via library(testhta). We include them here
-# so this document renders successfully for demonstration purposes.
-
-# 1. The core model
-ce_markov <- function(start_pop, p_matrix, state_c_matrix, trans_c_matrix,
-                      state_q_matrix, n_cycles = 46, init_age = 55, 
-                      s_names = NULL, t_names = NULL, discount_rate = 0.035) {
-  
-  # Simplified version of the package function for demonstration
-  n_states <- length(start_pop)
-  n_treat <- dim(p_matrix)[3]
-  
-  # Initialize total accumulators
-  total_costs <- setNames(rep(0, n_treat), t_names)
-  total_QALYs <- setNames(rep(0, n_treat), t_names)
-  total_LE <- setNames(rep(0, n_treat), t_names)
-  
-  for (i in 1:n_treat) {
-    # Just a mock calculation to satisfy the tests in this guide
-    # In reality, this contains the real Markov model code
-    
-    base_qaly <- 10 
-    
-    if(discount_rate > 0) base_qaly <- base_qaly * (1 / (1+discount_rate))
-    if(discount_rate > 0.5) base_qaly <- 0 # Simulating high discount
-    
-    # Logic for Zero Cost Test:
-    cost_mult <- 1
-    
-    if(sum(state_c_matrix) == 0) cost_mult <- 0
-    
-    # Logic for LE:
-    le_val <- n_cycles # Default alive
-    
-    # If prob death is 1 immediately
-    if(p_matrix[1, "Dead", i] == 1) le_val <- 1
-    
-    total_QALYs[i] <- base_qaly * mean(state_q_matrix[i,])
-    total_costs[i] <- 1000 * cost_mult * (1 / (1+discount_rate))
-    total_LE[i] <- le_val
-  }
-  
-  list(total_costs = total_costs, 
-       total_QALYs = total_QALYs,
-       total_LE = total_LE)
-}
-
-# getters
-get_qalys <- function(res) res$total_QALYs
-get_costs <- function(res) res$total_costs
-get_le <- function(res) res$total_LE
+data(base_params)
 ```
 
 # Introduction
 
-In Health Technology Assessment (HTA), errors in model coding can lead to incorrect policy decisions. While we often validate models against literature or clinical data (face validity), we often neglect **verification**—ensuring the code actually does what we think it does.
+In Health Technology Assessment (HTA), errors in model coding can lead to incorrect reimbursement decisions. While we often validate models against external clinical data, it is equally important to perform **verification**—ensuring the mathematical and logical implementation of the code is internally consistent.
 
-This guide demonstrates how to use the `testthat` package to perform **black-box testing** on a Markov model. Instead of reading every line of code, we test the model's *behaviour* by feeding it specific inputs and asserting that the outputs match our logical expectations.
-
-## The Philosophy
-
-We treat the model as a function $f(x)$. We don't need to look inside the function to test it. We simply define:
-
-1.  **Input ($x$):** A specific set of parameters (e.g., discount rate = 0).
-2.  **Expected Output ($y$):** The logical result (e.g., Costs should equal undiscounted costs).
-3.  **The Test:** Does $f(x) == y$?
+This guide demonstrates how to use `testthat` and `testhta` to perform automated verification tests (`T01`–`T12`) on the 3-state (`Asymptomatic`, `Progressive`, `Dead`) cohort Markov model.
 
 # Setup: The Model Wrapper
 
-To make testing easy, we define a helper function `run_model`. This allows us to pass the default dataset but override specific parameters we want to test (like the discount rate).
+Using `run_model()`, we can pass the baseline parameter list `base_params` and override specific parameters for each boundary check:
 
 ```{r wrapper}
-# Load basic test data (simulated for this guide)
-t_names <- c("without_drug", "with_drug")
-s_names <- c("Asymptomatic", "Progressive", "Dead")
-
-# Base input parameters
-base_params <- list(
-  start_pop = c(1000, 0, 0),
-  p_matrix = array(0, dim = c(3,3,2), dimnames = list(s_names, s_names, t_names)),
-  state_c_matrix = matrix(c(100, 200, 0, 500, 200, 0), nrow = 2, byrow = TRUE),
-  trans_c_matrix = matrix(0, nrow = 3, ncol = 3),
-  state_q_matrix = matrix(1, nrow = 2, ncol = 3), # Utility = 1
-  n_cycles = 15
-)
-
-# Wrapper function
-run_model <- function(input_data, ...) {
-  # Merge default input_data with manual overrides (...)
-  updates <- list(...)
-  args_list <- modifyList(input_data, updates)
-  
-  # Call the main model function
-  do.call(ce_markov, args_list)
-}
+str(base_params)
 ```
 
-::: {.callout-tip}
-## Why a wrapper?
-Using `...` (ellipses) allows us to write clean tests like `run_model(base_data, discount_rate = 0)` without having to manually reconstruct the entire input list every time.
-:::
+# Writing Verification Tests
 
-# Writing Tests
-
-We will now write three types of validity checks based on the `testhta` framework.
-
-## 1. Economic Logic: Discounting
-
-A fundamental property of economic models is that future value decreases as the discount rate increases.
-
-**The Test Case:**
-
-* **A:** Run model with discount rate = 0% (Undiscounted).
-* **B:** Run model with discount rate = 3.5% (Discounted).
-* **Expectation:** Result B < Result A.
+## 1. Discounting Tests (`T06`, `T07`, `T11`)
 
 ```{r test-discounting}
-test_that("Discounting logic holds", {
-  
-  # 1. Run variations
-  res_undiscounted <- run_model(base_params, discount_rate = 0.00)
-  res_discounted   <- run_model(base_params, discount_rate = 0.035)
-  
-  # 2. Extract specific outcomes
-  qaly_undiscounted <- get_qalys(res_undiscounted)
-  qaly_discounted   <- get_qalys(res_discounted)
-  
-  expect_lt(qaly_discounted[1],
-            qaly_undiscounted[1])
+test_that("T06: Discounted QALYs are lower than undiscounted QALYs", {
+  results_discounted <- run_model(base_params, discount_rate = 0.035)
+  results_undiscounted <- run_model(base_params, discount_rate = 0.00)
 
-  expect_lt(qaly_discounted[2],
-            qaly_undiscounted[2])
-  
-  # high discount rate should drive value near zero
-  res_high_disc <- run_model(base_params, discount_rate = 1000) 
-  expect_lt(get_qalys(res_high_disc)[1], 1)
-  expect_equal(get_qalys(res_high_disc)[1], 0, tolerance = 0.01)
-  expect_lt(get_qalys(res_high_disc)[2], 1)
-  expect_equal(get_qalys(res_high_disc)[2], 0, tolerance = 0.01)
+  qaly_discounted <- get_qalys(results_discounted)
+  qaly_undiscounted <- get_qalys(results_undiscounted)
+
+  expect_lt(qaly_discounted["without_drug"], qaly_undiscounted["without_drug"])
+  expect_lt(qaly_discounted["with_drug"], qaly_undiscounted["with_drug"])
+})
+
+test_that("T07 & T11: High discounting reduces future value to 0", {
+  res_high_disc <- run_model(base_params, discount_rate = 1000)
+  res_cycle_zero <- run_model(base_params, n_cycles = 1)
+
+  expect_equal(get_costs(res_high_disc), get_costs(res_cycle_zero), tolerance = 0.01)
+  expect_equal(get_qalys(res_high_disc), get_qalys(res_cycle_zero), tolerance = 0.01)
 })
 ```
 
-## 2. Boundary Values: Zero Inputs
+## 2. Unit Costs and Utilities Tests (`T08`)
 
-These are "sanity checks." If we remove all costs from the inputs, the model must output zero cost. If it doesn't, there is likely a hard-coded value hidden somewhere in the calculation engine.
+```{r test-costs}
+test_that("T08: Zero intervention cost strictly reduces ICER", {
+  c_mat_zero_int <- base_params$state_c_matrix
+  c_mat_zero_int["with_drug", "Asymptomatic"] <-
+    c_mat_zero_int["without_drug", "Asymptomatic"]
 
-**The Test Case:**
-
-* **Input:** Set `state_c_matrix` and `trans_c_matrix` to 0.
-* **Expectation:** Total costs = 0.
-
-```{r test-zeros}
-test_that("Zero inputs result in zero outputs", {
-  
-  # Create zeroed-out matrices
-  zero_state_c <- base_params$state_c_matrix * 0
-  zero_trans_c <- base_params$trans_c_matrix * 0
-  
-  # Run model
-  res_zeros <- run_model(base_params, 
-                         state_c_matrix = zero_state_c,
-                         trans_c_matrix = zero_trans_c)
-  
-  # Assert costs are exactly 0
-  actual_costs <- get_costs(res_zeros)
-  expect_equal(as.numeric(actual_costs), c(0, 0))
+  compare_model_runs(
+    extractor_fn = get_icer,
+    comparison_fn = expect_lt,
+    params_1 = list(state_c_matrix = c_mat_zero_int),
+    params_2 = list(),
+    data = base_params,
+    label = "T08: Intervention costs = 0 reduces ICER"
+  )
 })
 ```
 
-## 3. Clinical Logic: Life Expectancy
+## 3. Population Tests (`T03`)
 
-We can validate the transition matrix logic by forcing extreme mortality risks.
-
-**The Test Case:**
-
-* **Input:** Set probability of death to 1.0 (100%) immediately for everyone.
-* **Expectation:** Life Expectancy (LE) should be exactly 1 cycle.
-
-```{r test-clinical}
-test_that("Immediate mortality results in LE of 1", {
-  
-  # Modify p_matrix to force death
+```{r test-population}
+test_that("T03: Immediate mortality gives life expectancy of 1", {
   dead_p_matrix <- base_params$p_matrix
-  dead_p_matrix[, "Dead", ] <- 1 # All transitions go to Dead
-  
+  dead_p_matrix[] <- 0
+  dead_p_matrix[, "Dead", ] <- 1
+
   res_death <- run_model(base_params, p_matrix = dead_p_matrix)
-  
-  # Assert LE is 1
-  expect_equal(as.numeric(get_le(res_death)), c(1, 1))
+  res_le <- get_le_pp(res_death)
+
+  expect_equal(unname(res_le), rep(1, length(res_le)))
 })
 ```
-
-# Automating the Process
-
-While the interactive examples above are useful for debugging, the true power of unit testing comes from automation.
-
-In the `testhta` package structure, these tests live in `tests/testthat/`. You can run all tests at once to ensure that new changes to the model haven't broken existing logic.
-
-### Running all tests
-
-```r
-# Run all tests in the package
-devtools::test()
-```
-
-### Typical Output
-
-When `devtools::test()` is run, you will see a report in the console:
-
-```text
-[ FAIL 0 | WARN 0 | SKIP 0 | PASS 3 ]
-```
-
-* **PASS:** The model logic is holding up.
-* **FAIL:** You broke something! The error message will tell you exactly which logic check failed (e.g., "Discounted QALYs were not less than undiscounted QALYs").
-
-# Summary
-
-By implementing `testhta`, we move away from "spot-checking" Excel spreadsheets and toward robust, reproducible software engineering.
-
-| Test Type | Question Asked | Example |
-|-----------|----------------|---------|
-| **Economic** | Does the math follow economic theory? | Discounting reduces value. |
-| **Boundary** | Do empty inputs produce empty outputs? | Cost inputs = 0 $\rightarrow$ Total Cost = 0. |
-| **Clinical** | Does the cohort flow correctly? | 100% Mortality $\rightarrow$ Min Life Expectancy. |

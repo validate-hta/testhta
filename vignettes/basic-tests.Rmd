@@ -1,8 +1,8 @@
 ---
-title: "Writing Basic Bounding Tests"
+title: "R Test Code Examples"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Writing Basic Bounding Tests}
+  %\VignetteIndexEntry{R Test Code Examples}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,130 +19,188 @@ library(testhta)
 library(testthat)
 ```
 
-In health economic model verification, **basic bounding tests** check whether a model behaves correctly under extreme or "boundary" conditions where the mathematical output is known *a priori*. 
+This vignette steps through how to use the `testthat` package in R to automate verification tests of a cost-effectiveness analysis using the 3-state cohort Markov model (`ce_markov()`), corresponding to Section 6 of the tutorial paper.
 
-Unlike relational tests (which compare two different runs using `compare_model_runs()`), basic bounding tests assert model outputs against a single, static expected value (e.g. checking that costs are exactly 0 when unit costs are 0, or that QALYs are 0 under 100% discounting).
+We first load the baseline parameter list `base_params`:
 
-`testhta` provides three key assertion functions to write these tests without needing custom comparison wrappers:
-- `check_model_qalys(expected_qalys, data, ...)`
-- `check_model_costs(expected_costs, data, ...)`
-- `check_model_le(expected_le, data, ...)`
+```{r load-data}
+data(base_params)
+```
 
-This vignette demonstrates how to implement these basic bounding tests using the package's built-in cohort Markov model as a case study.
+We recommend prefixing every `test_that()` description with its unique identifier from the Test Registry (e.g., `"T06: ..."`). If a check fails, `testthat` will immediately flag which requirement ID was broken.
 
 ---
 
-## 1. QALY Bounding Tests
+## 1. Discounting Tests (`T06`, `T07`, `T11`)
 
-QALY calculations are sensitive to utility weights and discount rates. Under extreme conditions, QALY outcomes can be predicted exactly.
+A fundamental property of health economic models is that the present value ($PV$) of a future value ($FV$) decreases as time $t$ increases into the future and the discount rate $r$ increases:
 
-### T01: Extreme Discounting (100%)
-If the discount rate is extremely high (e.g. $1.0$, representing a $100\%$ discount rate), all future value is discounted to zero immediately. In `testhta`, a discount rate of 1 or greater sets all cycle values to 0. We expect total QALYs to equal 0.
+$$
+q_{PV} = \frac{q_{FV}}{(1 + r)^t}
+$$
 
-```{r t01}
-data(test_data)
+The verification tests corresponding to discounting in the Test Registry are `T04`, `T06`, `T07` (for QALYs) and `T10`, `T11` (for costs).
 
-check_model_qalys(
-  expected_qalys = 0,
-  data = test_data,
-  discount_rate = 1,
-  label = "T01: QALYs are 0 when discount rate is 100%"
-)
+### Test `T06`: Discounted QALYs Are Strictly Lower Than Undiscounted QALYs
+
+To verify that applying a standard positive discount rate ($r = 3.5\%$) results in strictly lower total QALYs compared to an undiscounted run ($r = 0\%$) for both treatment scenarios ($s = 1, 2$):
+
+1. **Step 1**: Run the model with discount rate $r = 0\%$ (undiscounted).
+2. **Step 2**: Run the model with discount rate $r = 3.5\%$ (discounted).
+3. **Step 3**: Assert that $q^s_{PV}(r = 3.5\%) < q^s_{PV}(r = 0\%)$ for each treatment using `expect_lt()`.
+
+```{r t06}
+test_that("T06: Discounted QALYs are lower than undiscounted QALYs", {
+  # run model with standard discounting (3.5%)
+  results_discounted <- with(
+    base_params,
+    ce_markov(
+      start_pop, p_matrix, state_c_matrix,
+      state_q_matrix, n_cycles,
+      discount_rate = 0.035
+    )
+  )
+
+  # run model with NO discounting (0%)
+  results_undiscounted <- with(
+    base_params,
+    ce_markov(
+      start_pop, p_matrix, state_c_matrix,
+      state_q_matrix, n_cycles,
+      discount_rate = 0.0
+    )
+  )
+
+  # alternatively, using the run_model() wrapper:
+  # results_discounted <- run_model(base_params, discount_rate = 0.035)
+  # results_undiscounted <- run_model(base_params, discount_rate = 0.00)
+
+  # extract the total QALYs using getter
+  qaly_discounted <- get_qalys(results_discounted)
+  qaly_undiscounted <- get_qalys(results_undiscounted)
+
+  # expectation: discounted must be less than undiscounted value
+  expect_lt(
+    qaly_discounted["without_drug"],
+    qaly_undiscounted["without_drug"]
+  )
+  expect_lt(
+    qaly_discounted["with_drug"],
+    qaly_undiscounted["with_drug"]
+  )
+})
 ```
 
-### T08: Infinite Discounting
-Similarly, if we simulate an infinite discount rate (e.g. `discount_rate = 1000`), QALY gains must tend to zero.
+### Tests `T07` & `T11`: High Discounting Reduces Future Value to Zero
+
+Under an arbitrarily large discount rate ($r \to \infty$), all costs and QALYs incurred after the initial cycle ($t > 0$) converge to zero, so total outcomes across the full time horizon equal the outcomes from cycle 0 alone (`n_cycles = 1`). Because this check depends on numerical convergence, we use the `tolerance` argument in `expect_equal()`.
+
+> **Why use `discount_rate = 1000` instead of `Inf`?**  
+> While `Inf` is mathematically ideal, an arbitrarily large finite number (`1000`) is recommended in practice so that test code remains generalizable and computationally stable when adapted for downstream numerical operations (such as optimization routines) that may fail on strictly infinite values.
+
+```{r t07-t11}
+test_that("T07 & T11: High discounting reduces future value to 0", {
+  # Run full model with extreme discount
+  res_high_disc <- run_model(base_params, discount_rate = 1000)
+
+  # Run a baseline model for only 1 cycle (time 0)
+  res_cycle_zero <- run_model(base_params, n_cycles = 1)
+
+  # Check Costs (T11)
+  expect_equal(
+    get_costs(res_high_disc),
+    get_costs(res_cycle_zero),
+    tolerance = 0.01,
+    label = "T11: High discount total costs equal cycle 0 costs"
+  )
+
+  # Check QALYs (T07)
+  expect_equal(
+    get_qalys(res_high_disc),
+    get_qalys(res_cycle_zero),
+    tolerance = 0.01,
+    label = "T07: High discount total QALYs equal cycle 0 QALYs"
+  )
+})
+```
+
+---
+
+## 2. Unit Costs and Utilities Tests (`T08`)
+
+Tests for unit costs and utilities often evaluate boundary conditions where specific cost or utility components are zeroed out or scaled. Test `T08` evaluates the boundary condition where the intervention cost is removed by setting the `with_drug` state costs equal to the `without_drug` baseline costs:
+
+$$
+C^2 = C^1
+$$
+
+Provided that baseline Incremental Effects ($\text{IE}$) are strictly positive ($\text{IE} > 0$), removing the intervention cost must strictly reduce the ICER. We use `testthat::skip_if_not()` to explicitly guard this directional assumption:
 
 ```{r t08}
-check_model_qalys(
-  expected_qalys = 0,
-  data = test_data,
-  discount_rate = 1000,
-  label = "T08: QALYs tend to 0 under infinite discounting"
-)
-```
+test_that("T08: Zero intervention cost strictly reduces ICER", {
+  # Temporary wrapper to isolate intervention cost
+  run_with_intervention_cost <- function(c_int) {
+    temp_params <- base_params
+    temp_params$state_c_matrix["with_drug", "Asymptomatic"] <-
+      temp_params$state_c_matrix["without_drug", "Asymptomatic"] + c_int
 
-### T04: Zero Utilities
-If all health state utilities are set to 0, no QALYs can be accumulated, regardless of survival or discounting. We can test this by setting the utility values to 0:
+    run_model(temp_params)
+  }
 
-```{r t04_utils}
-check_model_qalys(
-  expected_qalys = 0,
-  data = test_data,
-  u_healthy = 0,
-  u_sick = 0,
-  label = "T04: QALYs are 0 when all utility inputs are 0"
-)
-```
+  # Run model with a standard positive intervention cost
+  res_base <- run_model(base_params)
 
----
+  # Run model with zero intervention cost
+  res_no_int <- run_with_intervention_cost(c_int = 0)
 
-## 2. Cost Bounding Tests
+  # extract ICERs
+  res_no_int_icer <- get_icer(res_no_int)
+  res_base_icer <- get_icer(res_base)
 
-Similar to QALYs, cost calculations must equal zero under specific extreme parameters.
+  # extract baseline Incremental Effects (IE) to handle ICER directionality
+  base_qalys <- get_qalys(res_base)
+  res_base_ie <- unname(
+    base_qalys["with_drug"] - base_qalys["without_drug"]
+  )
 
-### T06: Zero Unit Costs
-If all health state occupancy costs, transition costs, and intervention costs are set to 0, the model must output a total cost of 0.
+  # verify ICER directional change based on the sign of IE
+  # skip the rest of this block if assumption fails
+  testthat::skip_if_not(
+    res_base_ie > 0,
+    "Baseline incremental QALYs are <= 0. Skipping ICER directionality tests."
+  )
 
-```{r t06_costs}
-check_model_costs(
-  expected_costs = 0,
-  data = test_data,
-  c_healthy = 0,
-  c_sick = 0,
-  c_intervention = 0,
-  c_death = 0,
-  label = "T06: Costs are 0 when all cost parameters are 0"
-)
-```
-
-### T12: Infinite Cost Discounting
-With an infinite cost discount rate, all costs incurred after time 0 are discounted to zero. Because `testhta` treats discount rates $\ge 1$ as zeroing out all cycles, we assert:
-
-```{r t12_costs}
-check_model_costs(
-  expected_costs = 0,
-  data = test_data,
-  discount_rate = 1000,
-  label = "T12: Costs tend to 0 under infinite discounting"
-)
+  expect_lt(res_no_int_icer, res_base_icer)
+})
 ```
 
 ---
 
-## 3. Population & Life Expectancy (LE) Bounding Tests
+## 3. Population Tests (`T03`)
 
-Survival transitions govern the population trace. We can verify survival calculations by setting transition probabilities to death to extreme bounds.
+Transition matrix logic can be verified by forcing extreme mortality risks to check life expectancy (`T01`, `T02`, `T03`). In Test `T03`, we set the probability of transitioning to `"Dead"` to $1$ ($100\%$) immediately for all states:
 
-### T05: Absolute Mortality (100% Death Rate)
-If the probability of transitioning to the "Dead" state is set to 1 for all alive states, the cohort will die immediately in the first cycle. Since the cohort only lives for cycle 1, the life expectancy must equal exactly 1.
+$$
+P^s = \begin{pmatrix}
+0 & 0 & 1 \\
+0 & 0 & 1 \\
+0 & 0 & 1
+\end{pmatrix}
+$$
 
-```{r t05_mortality}
-check_model_le(
-  expected_le = 1,
-  data = test_data,
-  p_healthy_death = 1,
-  p_sick_death = 1,
-  label = "T05: Life expectancy is 1 when death rate is 100%"
-)
+Using the named dimension `"Dead"` rather than a numeric column index keeps the test readable and self-documenting. With no within-cycle correction applied, per-person life expectancy (`get_le_pp()`) must equal exactly $1$ cycle for both scenarios:
+
+```{r t03}
+test_that("T03: Immediate mortality gives life expectancy of 1", {
+  # modify p_matrix to force death
+  dead_p_matrix <- base_params$p_matrix
+  dead_p_matrix[] <- 0
+  dead_p_matrix[, "Dead", ] <- 1 # all transitions go to Dead
+
+  res_death <- run_model(base_params, p_matrix = dead_p_matrix)
+  res_le <- get_le_pp(res_death)
+
+  # is per-person life expectancy for all scenarios = 1 cycle
+  expect_equal(unname(res_le), rep(1, length(res_le)))
+})
 ```
-
-### T10 (Modified): Zero Mortality (No-Death Bounding)
-If the probability of death is set to 0, no member of the cohort can die. Thus, the entire cohort must survive for the full time horizon (`n_cycles`). If we set the time horizon to 50 cycles, the life expectancy must be exactly 50.
-
-```{r t10_mortality}
-check_model_le(
-  expected_le = 50,
-  data = test_data,
-  p_healthy_death = 0,
-  p_sick_death = 0,
-  n_cycles = 50,
-  label = "T10: Life expectancy equals time horizon when death rate is 0%"
-)
-```
-
----
-
-## Summary of Bounding Tests
-
-By utilizing static bounding tests, you can guarantee that the mathematical limits of your model are preserved. These tests form the bedrock of your verification suite, ensuring that simple arithmetic mistakes or indexing shifts do not pass undetected.

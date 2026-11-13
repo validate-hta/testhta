@@ -9,7 +9,8 @@ set_time_horizon(input, scenario, values)
 \arguments{
 \item{input}{A list of model parameters.}
 
-\item{scenario}{The scenario name or index, or values if scenario is omitted.}
+\item{scenario}{The scenario name or index, or values if \code{values} is
+omitted.}
 
 \item{values}{The number of cycles (numeric).}
 }
@@ -20,6 +21,6 @@ The modified list of parameters.
 Set time horizon
 }
 \examples{
-data(test_data)
-updated <- set_time_horizon(test_data, 10)
+data(base_params)
+updated <- set_time_horizon(base_params, 10)
 }

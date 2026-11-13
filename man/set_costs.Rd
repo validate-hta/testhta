@@ -20,6 +20,6 @@ The modified list of parameters.
 Set costs for a scenario
 }
 \examples{
-data(test_data)
-updated <- set_costs(test_data, "without_drug", c(100, 200, 0))
+data(base_params)
+updated <- set_costs(base_params, "without_drug", c(100, 200, 0))
 }

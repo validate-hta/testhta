@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Automating HTA Model Validation with Unit Tests • testhta</title>
+<title>Automating Tests and AI-Assisted Verification • testhta</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -15,7 +15,7 @@
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Automating HTA Model Validation with Unit Tests">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Automating Tests and AI-Assisted Verification">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -39,10 +39,10 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-guides">
-<li><a class="dropdown-item" href="../articles/basic-tests.html">Writing Basic Bounding Tests</a></li>
-    <li><a class="dropdown-item" href="../articles/validation-guide.html">HTA Model Bounding &amp; Validation</a></li>
-    <li><a class="dropdown-item" href="../articles/verification-framework.html">The HTA Verification Framework</a></li>
-    <li><a class="dropdown-item" href="../articles/automating-hta-unit-tests.html">Automating HTA Model Validation with Unit Tests</a></li>
+<li><a class="dropdown-item" href="../articles/verification-framework.html">The HTA Verification Framework (T01–T12)</a></li>
+    <li><a class="dropdown-item" href="../articles/basic-tests.html">R Test Code Examples</a></li>
+    <li><a class="dropdown-item" href="../articles/validation-guide.html">Custom Expectations and Advanced Testing</a></li>
+    <li><a class="dropdown-item" href="../articles/automating-hta-unit-tests.html">Automating Tests and AI-Assisted Verification</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -61,7 +61,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Automating HTA Model Validation with Unit Tests</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Automating Tests and AI-Assisted Verification</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/validate-hta/testhta/blob/HEAD/vignettes/automating-hta-unit-tests.Rmd" class="external-link"><code>vignettes/automating-hta-unit-tests.Rmd</code></a></small>
@@ -70,89 +70,216 @@
 
     
     
-<p>Health economic evaluations require rigorous validation to ensure
-that structural logic, cost accounting, and transition probabilities
-behave as expected. The <code>testhta</code> package provides a
-standardized framework to validate cohort Markov models against
-established criteria, specifically aligning with the tests outlined in
-the HTA Verification Registry (T01 - T16).</p>
-<p>To make implementation as frictionless as possible,
-<code>testhta</code> includes scaffolding functions that instantly
-generate a comprehensive test suite tailored to your specific model
-data.</p>
+<p>This vignette corresponds to <strong>Section 7</strong>
+(<em>Automating the Process</em>) and <strong>Appendix B</strong>
+(<em>AI-Assisted Testing for Health Economic Models</em>) of the
+tutorial paper, covering:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Micro-Iteration vs. Macro-Iteration</strong>: Running tests
+interactively and automating the full suite via
+<code><a href="https://devtools.r-lib.org/reference/test.html" class="external-link">devtools::test()</a></code>.</li>
+<li>
+<strong>Scaffolding a Test Suite with
+<code><a href="../reference/use_hta_unittests.html">use_hta_unittests()</a></code></strong>: Generating a pre-configured
+<code>testthat</code> test file for your model (<code>T01</code> –
+<code>T12</code>).</li>
+<li>
+<strong>AI-Assisted Testing
+(<code>model-context.md</code>)</strong>: Using structured project
+context files with Large Language Model (LLM) assistants, along with
+smoke testing and regression testing safeguards.</li>
+</ol>
+<hr>
 <div class="section level2">
-<h2 id="setting-up-your-test-environment">Setting Up Your Test Environment<a class="anchor" aria-label="anchor" href="#setting-up-your-test-environment"></a>
+<h2 id="automating-the-verification-process">1. Automating the Verification Process<a class="anchor" aria-label="anchor" href="#automating-the-verification-process"></a>
 </h2>
-<p>If you are starting a new cost-effectiveness analysis (CEA) project
-or retrofitting an existing one, you can automatically generate the
-necessary testing infrastructure using the
-<code><a href="../reference/use_hta_unittests.html">use_hta_unittests()</a></code> function.</p>
-<p>This function creates the standard <code>tests/testthat/</code>
-directory structure required by the <code>testthat</code> package and
-injects a pre-configured test script.</p>
-<div class="section level3">
-<h3 id="generating-the-skeleton">Generating the Skeleton<a class="anchor" aria-label="anchor" href="#generating-the-skeleton"></a>
-</h3>
-<p>In your R console, simply run:</p>
+<p>Wickham and Bryan (2023) define different scales at which automated
+tests can be run:</p>
+<ul>
+<li>
+<strong>Micro-iteration</strong>: Running individual
+<code><a href="https://testthat.r-lib.org/reference/test_that.html" class="external-link">test_that()</a></code> blocks interactively in the console during
+model development and debugging. These checks do not even need to live
+inside a formal R package to be useful.</li>
+<li>
+<strong>Macro-iteration</strong>: Running the entire verification
+suite at once to ensure that new modifications to the model do not break
+existing logic.</li>
+</ul>
+<p>In an R package structure, all tests in <code>tests/testthat/</code>
+can be executed with a single command:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/test.html" class="external-link">test</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>When all checks pass, <code>testthat</code> outputs a summary
+report:</p>
+<pre class="text"><code>[ FAIL 0 | WARN 0 | SKIP 0 | PASS 3 ]</code></pre>
+<p>If a modeller inadvertently introduces a bug—for example, applying
+the discount factor in the wrong direction so that discounted QALYs
+exceed undiscounted QALYs—the test suite immediately stops and prints a
+traceable error referencing the Registry ID (<code>T06</code>):</p>
+<pre class="text"><code>Failure (test-discounting.R:14:3): T06: Discounted QALYs are lower than undiscounted QALYs
+qaly_discounted["without_drug"] (`actual`) not less than qaly_undiscounted["without_drug"] (`expected`).
+
+[ FAIL 1 | WARN 0 | SKIP 0 | PASS 2 ]</code></pre>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="scaffolding-your-test-environment-with-use_hta_unittests">2. Scaffolding Your Test Environment with
+<code>use_hta_unittests()</code><a class="anchor" aria-label="anchor" href="#scaffolding-your-test-environment-with-use_hta_unittests"></a>
+</h2>
+<p>To make adopting the <code>T01</code> – <code>T12</code> verification
+registry frictionless, <code>testhta</code> provides
+<code><a href="../reference/use_hta_unittests.html">use_hta_unittests()</a></code>. This function creates the
+<code>tests/testthat/</code> directory structure (if needed) and
+generates a complete test script pre-configured for the 12 registry
+tests.</p>
+<div class="section level3">
+<h3 id="generating-the-default-skeleton">Generating the Default Skeleton<a class="anchor" aria-label="anchor" href="#generating-the-default-skeleton"></a>
+</h3>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://validate-hta.github.io/testhta/">testhta</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Generate the default test skeleton</span></span>
+<span><span class="co"># Generate tests/testthat/test-hta_model.R using 'base_params'</span></span>
 <span><span class="fu"><a href="../reference/use_hta_unittests.html">use_hta_unittests</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>By default, this creates a file named <code>test-hta_model.R</code>
-that utilizes a placeholder data object named
-<code>test_data</code>.</p>
 </div>
 <div class="section level3">
-<h3 id="customizing-the-data-reference">Customizing the Data Reference<a class="anchor" aria-label="anchor" href="#customizing-the-data-reference"></a>
+<h3 id="customizing-the-baseline-parameter-object-name">Customizing the Baseline Parameter Object Name<a class="anchor" aria-label="anchor" href="#customizing-the-baseline-parameter-object-name"></a>
 </h3>
-<p>In practice, your CEA model parameters will likely be stored in a
-custom list or data frame. You can map the generated tests directly to
-your project’s naming conventions using the <code>data_name</code>
-argument.</p>
-<p>For example, if your baseline parameters are stored in an object
-called <code>basecase_params</code>, you can run:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<p>If your project stores its baseline model parameters in an object
+with a different name (e.g., <code>basecase_params</code>), pass
+<code>data_name</code> to automatically substitute all dataset
+references in the generated script:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/use_hta_unittests.html">use_hta_unittests</a></span><span class="op">(</span>data_name <span class="op">=</span> <span class="st">"basecase_params"</span><span class="op">)</span></span></code></pre></div>
-<p>The resulting test script will automatically substitute all internal
-references, ensuring tests like the one below are immediately
-executable:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://testthat.r-lib.org/reference/test_that.html" class="external-link">test_that</a></span><span class="op">(</span><span class="st">"T01: QALYs with discount_rate = 1 should be 0"</span>, <span class="op">{</span></span>
-<span>  <span class="fu"><a href="../reference/check_model_qalys.html">check_model_qalys</a></span><span class="op">(</span></span>
-<span>    data <span class="op">=</span> <span class="va">basecase_params</span>, </span>
-<span>    discount_rate <span class="op">=</span> <span class="fl">1</span>, </span>
-<span>    expected_qalys <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>    label <span class="op">=</span> <span class="st">"T01: QALYs with discount_rate = 1 should be 0"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<hr>
 </div>
 </div>
 <div class="section level2">
-<h2 id="the-verification-registry-suite">The Verification Registry Suite<a class="anchor" aria-label="anchor" href="#the-verification-registry-suite"></a>
+<h2 id="ai-assisted-testing-for-health-economic-models">3. AI-Assisted Testing for Health Economic Models<a class="anchor" aria-label="anchor" href="#ai-assisted-testing-for-health-economic-models"></a>
 </h2>
-<p>The generated skeleton includes programmatic checks for 16
-standardized HTA validation tests, categorized into four core areas. For
-the complete test matrix, detailed descriptions, and code examples, see
-the dedicated <a href="https://validate-hta.github.io/testhta/articles/verification-framework.html"><strong>HTA
-Verification Framework Vignette</strong></a>
-(<code>vignettes/verification-framework.Rmd</code>).</p>
+<p>Large language model (LLM) assistants (such as Claude) offer a
+practical opportunity to accelerate the adoption of automated
+verification in HTA. Rather than replacing the modeller’s domain
+judgement, an LLM can translate conceptual verification requirements
+from the Test Registry (<code>T01</code> – <code>T12</code>) into
+syntactically valid <code>testthat</code> code in seconds, acting as a
+first-draft author that the domain expert then reviews and
+validates.</p>
+<div class="section level3">
+<h3 id="standardised-context-and-prompts-model-context-md">Standardised Context and Prompts
+(<code>model-context.md</code>)<a class="anchor" aria-label="anchor" href="#standardised-context-and-prompts-model-context-md"></a>
+</h3>
+<p>To prevent an LLM from suggesting generic or incompatible code,
+modellers can place a structured configuration file (e.g.,
+<code>model-context.md</code>) in the project root that explicitly
+defines:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Persona &amp; Scope</strong></li>
+<li>
+<strong>Structural Contract: Helper Functions</strong> (required
+setters, getters, and wrappers)</li>
+<li>
+<strong>Test Registry (Source of Truth)</strong> (<code>T01</code> –
+<code>T12</code>)</li>
+<li><strong>Coding Standard &amp; Implementation Rules</strong></li>
+</ol>
+<p>With <code>model-context.md</code> in the project root, you can
+prompt an AI assistant:</p>
+<blockquote>
+<p><em>“Generate the <code>testthat</code> code for T06 and T12 based on
+the provided <code>model-context.md</code>.”</em></p>
+</blockquote>
 </div>
-<div class="section level2">
-<h2 id="executing-the-test-suite">Executing the Test Suite<a class="anchor" aria-label="anchor" href="#executing-the-test-suite"></a>
-</h2>
-<p>Once your helper functions are defined and your parameter object is
-loaded into the environment, you can execute the validation suite.</p>
-<p><strong>Command Line Execution:</strong> You can run the entire suite
-from the R console using the <code>devtools</code> package:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/test.html" class="external-link">test</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p><strong>IDE Integration:</strong> If your programming workflow relies
-on Positron or VS Code, you can leverage their integrated testing
-environments. Both IDEs automatically detect <code>testthat</code>
-files, allowing you to run, debug, and track the success of individual
-T01-T16 test blocks directly from the testing pane without manually
-executing console commands.</p>
+<div class="section level3">
+<h3 id="example-model-context-md-template">Example <code>model-context.md</code> Template<a class="anchor" aria-label="anchor" href="#example-model-context-md-template"></a>
+</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu"># AI Agent Project Context: Health Economic Model Verification</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="fu">## 1. Persona &amp; Scope</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>You are an expert Health Economist and R Software Developer. Your goal is to</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>write robust, transparent, and reproducible unit tests for HTA models using the</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="in">`testthat`</span> package.</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="fu">## 2. Structural Contract: Helper Functions</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>To ensure modularity and "separation of concerns," all model interactions must</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>follow these interface patterns:</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="ss">* </span>**Required Setters/Mutators** (Must return input object):</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="ss">  * </span><span class="in">`set_discount_rate(input, discount_rate)`</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="ss">  * </span><span class="in">`set_costs(input, scenario, values)`</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="ss">  * </span><span class="in">`set_p_matrix(input, scenario, values)`</span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="ss">  * </span><span class="in">`set_utilities(input, scenario, values)`</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="ss">  * </span><span class="in">`set_time_horizon(input, scenario, values)`</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="ss">* </span>**Required Getters/Accessors**:</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="ss">  * </span><span class="in">`get_qalys(res)`</span>: Extract total QALYs.</span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="ss">  * </span><span class="in">`get_costs(res)`</span>: Extract total costs.</span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="ss">  * </span><span class="in">`get_le(res)`</span>: Extract life expectancy.</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="ss">  * </span><span class="in">`get_icer(res)`</span>: Extract ICER.</span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="ss">* </span>**Required Wrappers &amp; Utilities**:</span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="ss">  * </span><span class="in">`run_model(data, ...)`</span>: Mandatory wrapper.</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="ss">  * </span><span class="in">`compare_model_runs(...)`</span>: Encapsulate comparison logic for different model outputs.</span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a></span>
+<span id="cb6-29"><a href="#cb6-29" tabindex="-1"></a><span class="fu">## 3. Test Registry (Source of Truth)</span></span>
+<span id="cb6-30"><a href="#cb6-30" tabindex="-1"></a>All automated verification must align with these:</span>
+<span id="cb6-31"><a href="#cb6-31" tabindex="-1"></a></span>
+<span id="cb6-32"><a href="#cb6-32" tabindex="-1"></a><span class="pp">|</span> ID  <span class="pp">|</span> Group <span class="pp">|</span> Test Condition                 <span class="pp">|</span> Expected Result           <span class="pp">|</span></span>
+<span id="cb6-33"><a href="#cb6-33" tabindex="-1"></a><span class="pp">|-----|-------|--------------------------------|---------------------------|</span></span>
+<span id="cb6-34"><a href="#cb6-34" tabindex="-1"></a><span class="pp">|</span> T01 <span class="pp">|</span> Pop   <span class="pp">|</span> Set relative effects = 1       <span class="pp">|</span> Equal LYGs &amp; QALYs        <span class="pp">|</span></span>
+<span id="cb6-35"><a href="#cb6-35" tabindex="-1"></a><span class="pp">|</span> T02 <span class="pp">|</span> Pop   <span class="pp">|</span> Set mortality = 0              <span class="pp">|</span> LE = time horizon         <span class="pp">|</span></span>
+<span id="cb6-36"><a href="#cb6-36" tabindex="-1"></a><span class="pp">|</span> T03 <span class="pp">|</span> Pop   <span class="pp">|</span> Set mortality = 1              <span class="pp">|</span> LE = 1                    <span class="pp">|</span></span>
+<span id="cb6-37"><a href="#cb6-37" tabindex="-1"></a><span class="pp">|</span> T04 <span class="pp">|</span> QALY  <span class="pp">|</span> Set discount rate = 0 (u=1)    <span class="pp">|</span> Total QALYs = LE          <span class="pp">|</span></span>
+<span id="cb6-38"><a href="#cb6-38" tabindex="-1"></a><span class="pp">|</span> T05 <span class="pp">|</span> QALY  <span class="pp">|</span> Set utilities = 1              <span class="pp">|</span> QALY gains = LYGS         <span class="pp">|</span></span>
+<span id="cb6-39"><a href="#cb6-39" tabindex="-1"></a><span class="pp">|</span> T06 <span class="pp">|</span> QALY  <span class="pp">|</span> Positive discount rate         <span class="pp">|</span> Disc QALYs &lt; Undisc       <span class="pp">|</span></span>
+<span id="cb6-40"><a href="#cb6-40" tabindex="-1"></a><span class="pp">|</span> T07 <span class="pp">|</span> QALY  <span class="pp">|</span> QALY discount rate = inf       <span class="pp">|</span> QALYs t&gt;0 -&gt; 0            <span class="pp">|</span></span>
+<span id="cb6-41"><a href="#cb6-41" tabindex="-1"></a><span class="pp">|</span> T08 <span class="pp">|</span> Cost  <span class="pp">|</span> Set intervention costs = 0     <span class="pp">|</span> ICER is reduced           <span class="pp">|</span></span>
+<span id="cb6-42"><a href="#cb6-42" tabindex="-1"></a><span class="pp">|</span> T09 <span class="pp">|</span> Cost  <span class="pp">|</span> Increase intervention costs    <span class="pp">|</span> ICER is increased         <span class="pp">|</span></span>
+<span id="cb6-43"><a href="#cb6-43" tabindex="-1"></a><span class="pp">|</span> T10 <span class="pp">|</span> Cost  <span class="pp">|</span> Set cost discount rate = 0     <span class="pp">|</span> Disc costs = Undisc       <span class="pp">|</span></span>
+<span id="cb6-44"><a href="#cb6-44" tabindex="-1"></a><span class="pp">|</span> T11 <span class="pp">|</span> Cost  <span class="pp">|</span> Set cost discount rate = inf   <span class="pp">|</span> Costs t&gt;0 -&gt; 0            <span class="pp">|</span></span>
+<span id="cb6-45"><a href="#cb6-45" tabindex="-1"></a><span class="pp">|</span> T12 <span class="pp">|</span> Input <span class="pp">|</span> Sampled parameters             <span class="pp">|</span> Bounds (e.g. 0-1)         <span class="pp">|</span></span>
+<span id="cb6-46"><a href="#cb6-46" tabindex="-1"></a></span>
+<span id="cb6-47"><a href="#cb6-47" tabindex="-1"></a><span class="fu">## 4. Coding Standard &amp; Implementation Rules</span></span>
+<span id="cb6-48"><a href="#cb6-48" tabindex="-1"></a><span class="ss">* </span>**Modular Architecture**: "Separation of concerns" is mandatory. Do not write monolithic scripts.</span>
+<span id="cb6-49"><a href="#cb6-49" tabindex="-1"></a><span class="ss">* </span>**TDD**: Define expectations based on requirements before writing model functions.</span>
+<span id="cb6-50"><a href="#cb6-50" tabindex="-1"></a><span class="ss">* </span>**Naming**: Every <span class="in">`test_that()`</span> block must start with its Registry ID.</span>
+<span id="cb6-51"><a href="#cb6-51" tabindex="-1"></a><span class="ss">* </span>**Tolerance**: Use <span class="in">`tolerance = 0.01`</span> for floating-point comparisons.</span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="limitations-and-mitigating-ai-risks-with-smoke-and-regression-testing">Limitations and Mitigating AI Risks with Smoke and Regression
+Testing<a class="anchor" aria-label="anchor" href="#limitations-and-mitigating-ai-risks-with-smoke-and-regression-testing"></a>
+</h3>
+<p>Modellers must remain vigilant about three failure modes when using
+AI assistants:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Semantically Inverted Logic</strong>: An LLM may generate
+syntactically valid code that inverts the intended inequality (e.g.,
+asserting discounted costs are <em>greater</em> than undiscounted
+costs).</li>
+<li>
+<strong>False Sense of Completeness</strong>: An LLM cannot know
+which clinical assumptions are model-specific versus universal.</li>
+<li>
+<strong>Unreviewed Code</strong>: Every generated test must be read
+and understood by the modeller before being committed.</li>
+</ol>
+<p>Two software testing paradigms are particularly effective for
+mitigating AI-induced errors:</p>
+<ul>
+<li>
+<strong>Smoke Testing</strong>: A preliminary check that executes
+the model pipeline with AI-generated inputs or parameter structures to
+verify that the model runs to completion without fatal errors or
+<code>NaN</code>s before investing time in deeper validation.</li>
+<li>
+<strong>Regression Testing</strong>: Running the comprehensive
+<code>T01</code> – <code>T12</code> test suite after any AI-assisted
+refactoring or feature addition to verify that new edits have not
+silently broken previously verified baseline model logic.</li>
+</ul>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -165,7 +292,7 @@ executing console commands.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

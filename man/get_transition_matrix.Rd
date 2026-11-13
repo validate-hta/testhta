@@ -12,12 +12,13 @@ get_transition_matrix(input, arm = NULL)
 \item{arm}{Optional treatment arm name (character) or index.}
 }
 \value{
-A matrix of transition probabilities for the specified arm, or the 3D array if arm is NULL.
+A matrix of transition probabilities for the specified arm, or the
+3D array if \code{arm} is \code{NULL}.
 }
 \description{
 Getter for transition probability matrix
 }
 \examples{
-data(test_data)
-get_transition_matrix(test_data, "without_drug")
+data(base_params)
+get_transition_matrix(base_params, "without_drug")
 }

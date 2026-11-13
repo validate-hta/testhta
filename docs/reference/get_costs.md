@@ -12,7 +12,8 @@ get_costs(res, arm = NULL)
 
 - res:
 
-  A list of results returned by ce_markov.
+  A list of results returned by
+  [`ce_markov()`](https://validate-hta.github.io/testhta/reference/ce_markov.md).
 
 - arm:
 
@@ -21,17 +22,17 @@ get_costs(res, arm = NULL)
 ## Value
 
 A numeric vector of total costs by treatment, or a single numeric value
-if arm is specified.
+if `arm` is specified.
 
 ## Examples
 
 ``` r
-data(test_data)
-res <- run_model(test_data)
+data(base_params)
+res <- run_model(base_params)
 get_costs(res)
 #> without_drug    with_drug 
-#>     9205.744    16977.576 
+#>      1147099      4865536 
 get_costs(res, "with_drug")
 #> with_drug 
-#>  16977.58 
+#>   4865536 
 ```

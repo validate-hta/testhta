@@ -21,7 +21,7 @@ A character vector of treatment arm names.
 ## Examples
 
 ``` r
-data(test_data)
-get_arm_names(test_data)
+data(base_params)
+get_arm_names(base_params)
 #> [1] "without_drug" "with_drug"   
 ```

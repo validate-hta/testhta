@@ -7,19 +7,20 @@
 get_qalys(res, arm = NULL)
 }
 \arguments{
-\item{res}{A list of results returned by ce_markov.}
+\item{res}{A list of results returned by \code{ce_markov()}.}
 
 \item{arm}{Optional treatment arm name or index.}
 }
 \value{
-A numeric vector of total QALYs by treatment, or a single numeric value if arm is specified.
+A numeric vector of total QALYs by treatment, or a single numeric
+value if \code{arm} is specified.
 }
 \description{
 Getter for QALYs
 }
 \examples{
-data(test_data)
-res <- run_model(test_data)
+data(base_params)
+res <- run_model(base_params)
 get_qalys(res)
 get_qalys(res, "with_drug")
 }

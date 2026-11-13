@@ -4,8 +4,8 @@
 #' @param discount_rate The discount rate to set (numeric).
 #' @return The modified list of parameters.
 #' @examples
-#' data(test_data)
-#' updated <- set_discount_rate(test_data, 0.05)
+#' data(base_params)
+#' updated <- set_discount_rate(base_params, 0.05)
 #' @export
 set_discount_rate <- function(input, discount_rate) {
   if (!is.list(input)) {
@@ -25,8 +25,8 @@ set_discount_rate <- function(input, discount_rate) {
 #' @param values A vector of cost values for health states.
 #' @return The modified list of parameters.
 #' @examples
-#' data(test_data)
-#' updated <- set_costs(test_data, "without_drug", c(100, 200, 0))
+#' data(base_params)
+#' updated <- set_costs(base_params, "without_drug", c(100, 200, 0))
 #' @export
 set_costs <- function(input, scenario, values) {
   if (!is.list(input)) {
@@ -43,9 +43,9 @@ set_costs <- function(input, scenario, values) {
 #' @param values A matrix of transition probabilities.
 #' @return The modified list of parameters.
 #' @examples
-#' data(test_data)
-#' mat <- test_data$p_matrix[, , "without_drug"]
-#' updated <- set_p_matrix(test_data, "without_drug", mat)
+#' data(base_params)
+#' mat <- base_params$p_matrix[, , "without_drug"]
+#' updated <- set_p_matrix(base_params, "without_drug", mat)
 #' @export
 set_p_matrix <- function(input, scenario, values) {
   if (!is.list(input)) {
@@ -62,8 +62,8 @@ set_p_matrix <- function(input, scenario, values) {
 #' @param values A vector of utility values for health states.
 #' @return The modified list of parameters.
 #' @examples
-#' data(test_data)
-#' updated <- set_utilities(test_data, "without_drug", c(0.8, 0.5, 0))
+#' data(base_params)
+#' updated <- set_utilities(base_params, "without_drug", c(0.8, 0.5, 0))
 #' @export
 set_utilities <- function(input, scenario, values) {
   if (!is.list(input)) {
@@ -76,12 +76,13 @@ set_utilities <- function(input, scenario, values) {
 #' Set time horizon
 #'
 #' @param input A list of model parameters.
-#' @param scenario The scenario name or index, or values if scenario is omitted.
+#' @param scenario The scenario name or index, or values if `values` is
+#'   omitted.
 #' @param values The number of cycles (numeric).
 #' @return The modified list of parameters.
 #' @examples
-#' data(test_data)
-#' updated <- set_time_horizon(test_data, 10)
+#' data(base_params)
+#' updated <- set_time_horizon(base_params, 10)
 #' @export
 set_time_horizon <- function(input, scenario, values) {
   if (!is.list(input)) {
@@ -94,4 +95,3 @@ set_time_horizon <- function(input, scenario, values) {
   }
   input
 }
-

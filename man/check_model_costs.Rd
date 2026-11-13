@@ -4,22 +4,32 @@
 \alias{check_model_costs}
 \title{Run model and check Costs against an expected value}
 \usage{
-check_model_costs(expected_costs, ..., label = NULL)
+check_model_costs(data, expected_costs, ..., tolerance = NULL, label = NULL)
 }
 \arguments{
+\item{data}{Baseline input data list.}
+
 \item{expected_costs}{The exact expected Cost value.}
 
 \item{...}{Arguments passed to \code{run_model()}.}
 
+\item{tolerance}{Approximate equality tolerance.}
+
 \item{label}{A label for the test, passed to \code{expect_equal()}.}
 }
 \value{
-None, called for side effects (testthat assertion).
+None, called for side effects (\code{testthat} assertion).
 }
 \description{
 Run model and check Costs against an expected value
 }
 \examples{
-data(test_data)
-check_model_costs(0, data = test_data, c_healthy = 0, c_sick = 0, c_intervention = 0, c_death = 0)
+data(base_params)
+res_cycle_zero <- run_model(base_params, n_cycles = 1)
+check_model_costs(
+  data = base_params,
+  expected_costs = get_costs(res_cycle_zero),
+  discount_rate = 1000,
+  tolerance = 0.01
+)
 }

@@ -1,5 +1,5 @@
-pandoc: 3.8.3
-pkgdown: 2.2.0
+pandoc: '3.10'
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   automating-hta-unit-tests: automating-hta-unit-tests.html
@@ -7,7 +7,7 @@ articles:
   introduction: introduction.html
   validation-guide: validation-guide.html
   verification-framework: verification-framework.html
-last_built: 2026-07-26T18:00Z
+last_built: 2026-11-13T12:32Z
 urls:
   reference: https://validate-hta.github.io/testhta/reference
   article: https://validate-hta.github.io/testhta/articles

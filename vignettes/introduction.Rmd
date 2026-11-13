@@ -18,94 +18,121 @@ knitr::opts_chunk$set(
 library(testhta)
 ```
 
-`testhta` provides a software-engineering-inspired framework for building and validating Health Technology Assessment (HTA) cost-effectiveness models in R. By combining cohort Markov models with structured unit tests, it ensures model transparency, correctness, and reproducibility.
+`testhta` provides a software-engineering-inspired framework for building and verifying Health Technology Assessment (HTA) and health economic models in R. By combining a modular cohort Markov model architecture with structured automated tests via `testthat`, it ensures model transparency, internal consistency, and reproducibility.
 
-This vignette covers:
-1. Setting up a Markov model.
-2. Running the model under baseline parameters.
-3. Accessing model outputs using getters.
+This vignette covers the case study presented in Section 5 and Section 6.1–6.2 of the accompanying tutorial paper:
 
-## 1. The HTA Markov Model Setup
+1. **Model Overview**: Defining the 3-state discrete-time Markov cohort model and baseline input parameters (`base_params`).
+2. **Model Architecture**: Applying "separation of concerns" across input parameters, the simulation engine (`ce_markov()`), and helper functions (`run_model()`, getters, and setters).
+3. **Running and Interacting with the Model**: Extracting outcomes and modifying parameters cleanly.
 
-The core function in `testhta` is `ce_markov()`, which runs a cohort Markov model. The model expects:
-- `start_pop`: Initial counts of the cohort across health states.
-- `p_matrix`: A 3-dimensional array of transition probabilities (states $\times$ states $\times$ treatments).
-- `state_c_matrix`: A matrix of costs for state occupancy.
-- `trans_c_matrix`: A matrix of costs incurred during state transitions.
-- `state_q_matrix`: A matrix of quality-of-life weights (utilities) for each state.
+---
 
-The package includes a built-in baseline dataset called `test_data`. Let's inspect its structure:
+## 1. Case Study: A 3-State Discrete-Time Markov Model
 
-```{r test_data}
-# Load baseline dataset
-data(test_data)
-names(test_data)
+We consider a 3-state (`Asymptomatic`, `Progressive`, `Dead`) cohort Markov model with two intervention scenarios: **Without Drug** ($s = 1$, `"without_drug"`) and **With Drug** ($s = 2$, `"with_drug"`).
+
+The drug unit cost is 400 monetary units. Let $p^s_{xy}$ denote the transition probability from state $x$ to state $y$ for scenario $s$, and let $c^s_x$ and $q^s_x$ denote the state occupancy costs and utility weights for state $x$ and scenario $s$:
+
+$$
+C^1 = \begin{pmatrix} 100 \\ 200 \\ 0 \end{pmatrix}, \quad
+C^2 = \begin{pmatrix} 500 \\ 200 \\ 0 \end{pmatrix}, \quad
+Q^s = \begin{pmatrix} 0.9 \\ 0.6 \\ 0 \end{pmatrix}
+$$
+
+and the baseline transition probability matrices are:
+
+$$
+P^1 = \begin{pmatrix}
+0.75 & 0.2 & 0.05 \\
+0 & 0.9 & 0.1 \\
+0 & 0 & 1
+\end{pmatrix}, \quad
+P^2 = \begin{pmatrix}
+0.85 & 0.1 & 0.05 \\
+0 & 0.95 & 0.05 \\
+0 & 0 & 1
+\end{pmatrix}
+$$
+
+A cohort of size $n = 1000$ starts in state $x = 1$ (`Asymptomatic`) at time $t = 0$ and is simulated over a time horizon of $n_{\text{cycles}} = 15$ cycles with a $3.5\%$ annual discount rate (`discount_rate = 0.035`).
+
+### Baseline Input Parameters (`base_params`)
+
+In R, this model definition is stored as a list named `base_params` (also available via `data(base_params)`):
+
+```{r base_params}
+data(base_params)
+str(base_params)
 ```
 
-It contains:
-- `start_pop`: Vector of length 3 (Asymptomatic disease, Progressive disease, Dead)
-- `p_matrix`: $3 \times 3 \times 2$ array for `without_drug` and `with_drug`
-- `state_c_matrix`: State cost matrix for each treatment
-- `state_q_matrix`: Utility matrix for each treatment
-- `discount_rate`: Standard HTA discount rate (typically 3.5% or 0.035)
-- `n_cycles`: Time horizon of the model
+---
 
-## 2. Running the Model
+## 2. Model Architecture: Separation of Concerns
 
-We can run the model by passing `test_data` parameters directly to `ce_markov()`, or using the wrapper helper `run_model()`.
+To effectively implement automated verification using `testthat`, the underlying R code should not be written as a single monolithic script that relies on global variables. Instead, `testhta` separates the computational pipeline into three modular domains:
 
-Here is how you execute the Markov simulation:
+1. **Input Parameters (`base_params`)**: Transition matrices, cost vectors, utility weights, time horizon, and discount rate are isolated in a structured list so that individual tests can inject boundary values without contaminating the global environment.
+2. **Simulation Engine (`ce_markov()`)**: Accepts the input parameters, executes the matrix multiplication across the specified time horizon, and returns a single list object containing all cohort traces and summary outputs.
+3. **Helper Functions (Wrappers, Setters, and Getters)**: Abstract away the internal structure of the input and output lists so that test scripts remain concise and resilient to future refactoring.
+
+### Running the Model with `run_model()`
+
+The convenience wrapper `run_model(data, ...)` merges `base_params` with any named parameter overrides passed via `...` (using `modifyList()`) and calls `ce_markov()`:
 
 ```{r run_model}
-# Run with the helper wrapper
-results <- run_model(test_data)
+# Run the model with baseline parameters
+results <- run_model(base_params)
+names(results)
 ```
 
-The output of `run_model()` is a list containing the population distributions, cycle-specific costs and QALYs, and summary metrics.
+---
 
-## 3. Extracting Results using Getters
+## 3. Extracting Results Using Getters
 
-`testhta` provides clean getter functions to extract the key outcomes from your model results:
+`testhta` provides getter (accessor) functions to extract targeted outputs from a model run without hard-coding list element names throughout your test suite:
 
-- `get_qalys()`: Extracts total Quality-Adjusted Life Years (QALYs).
-- `get_costs()`: Extracts total costs.
-- `get_le()`: Extracts total Life Expectancy (undiscounted life-years).
-- `get_icer()`: Calculates the Incremental Cost-Effectiveness Ratio (ICER) between the two arms.
-
-Let's retrieve these values from our results:
+- `get_qalys(res)` / `get_qalys_pp(res)`: Extract total cohort QALYs or per-person QALYs.
+- `get_costs(res)` / `get_costs_pp(res)`: Extract total cohort costs or per-person costs.
+- `get_le(res)` / `get_le_pp(res)`: Extract total cohort Life Expectancy or per-person Life Expectancy (undiscounted life-years).
+- `get_icer(res)`: Calculate the Incremental Cost-Effectiveness Ratio (ICER) comparing `with_drug` against `without_drug`.
 
 ```{r getters}
-# Get total QALYs
+# Total cohort QALYs and per-person QALYs
 get_qalys(results)
+get_qalys_pp(results)
 
-# Get total Costs
+# Total cohort Costs and per-person Costs
 get_costs(results)
+get_costs_pp(results)
 
-# Get life expectancy
+# Total and per-person Life Expectancy (LE)
 get_le(results)
+get_le_pp(results)
 
-# Calculate the ICER
+# Incremental Cost-Effectiveness Ratio (ICER)
 get_icer(results)
 ```
 
-## 4. Parameter Modification with Setters
+---
 
-The package provides setter functions that follow a tidy workflow using the base R pipe (`|>`). These allow you to easily modify input parameters for scenario or sensitivity analyses before running the model:
+## 4. Modifying Parameters Using Setters
+
+Similarly, setter (mutator) functions safely modify a specific parameter within `base_params` and return the updated parameter list, enabling clean pipelines with the base R pipe (`|>`):
 
 - `set_discount_rate(input, discount_rate)`
 - `set_time_horizon(input, n_cycles)`
 - `set_costs(input, scenario, values)`
 - `set_utilities(input, scenario, values)`
+- `set_p_matrix(input, scenario, values)`
 
-For example, to calculate the ICER with no discounting and a shorter time horizon (20 cycles):
+For example, to evaluate the model with a $0\%$ discount rate over a 10-cycle time horizon:
 
 ```{r piping}
-scenario_results <- test_data |>
+scenario_results <- base_params |>
   set_discount_rate(0) |>
-  set_time_horizon(20) |>
+  set_time_horizon(10) |>
   run_model()
 
 get_icer(scenario_results)
 ```
-
-This piping framework makes scenario analysis clean, readable, and less prone to copy-paste errors.

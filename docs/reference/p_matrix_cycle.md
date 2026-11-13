@@ -1,6 +1,6 @@
 # Time-dependent probability matrix
 
-Calculates time-dependent transition probabilities for a Markov model
+Calculates time-dependent transition probabilities for a Markov model.
 
 ## Usage
 
@@ -22,48 +22,48 @@ p_matrix_cycle(
 
 - p_matrix:
 
-  The base transition probability matrix
+  The base transition probability matrix.
 
 - age:
 
-  The age of the individual
+  The age of the individual.
 
 - cycle:
 
-  The current cycle number
+  The current cycle number.
 
 - tpProg:
 
   The probability of progression from asymptomatic to progressive
-  disease
+  disease.
 
 - tpDcm:
 
-  The probability of death from progressive disease
+  The probability of death from progressive disease.
 
 - effect:
 
-  The effectiveness of the drug
+  The effectiveness of the drug.
 
 - p_healthy_death:
 
-  Optional override for transition probability from healthy to dead
+  Optional override for transition probability from healthy to dead.
 
 - p_sick_death:
 
-  Optional override for transition probability from sick to dead
+  Optional override for transition probability from sick to dead.
 
 - ...:
 
-  Extra arguments
+  Extra arguments.
 
 ## Value
 
-The updated transition probability matrix
+The updated transition probability matrix.
 
 ## Examples
 
 ``` r
-data(test_data)
-p_mat <- p_matrix_cycle(test_data$p_matrix, age = 55, cycle = 1)
+data(base_params)
+p_mat <- p_matrix_cycle(base_params$p_matrix, age = 55, cycle = 1)
 ```

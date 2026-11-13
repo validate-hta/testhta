@@ -17,31 +17,35 @@ p_matrix_cycle(
 )
 }
 \arguments{
-\item{p_matrix}{The base transition probability matrix}
+\item{p_matrix}{The base transition probability matrix.}
 
-\item{age}{The age of the individual}
+\item{age}{The age of the individual.}
 
-\item{cycle}{The current cycle number}
+\item{cycle}{The current cycle number.}
 
-\item{tpProg}{The probability of progression from asymptomatic to progressive disease}
+\item{tpProg}{The probability of progression from asymptomatic to
+progressive disease.}
 
-\item{tpDcm}{The probability of death from progressive disease}
+\item{tpDcm}{The probability of death from progressive disease.}
 
-\item{effect}{The effectiveness of the drug}
+\item{effect}{The effectiveness of the drug.}
 
-\item{p_healthy_death}{Optional override for transition probability from healthy to dead}
+\item{p_healthy_death}{Optional override for transition probability from
+healthy to dead.}
 
-\item{p_sick_death}{Optional override for transition probability from sick to dead}
+\item{p_sick_death}{Optional override for transition probability from sick
+to dead.}
 
-\item{...}{Extra arguments}
+\item{...}{Extra arguments.}
 }
 \value{
-The updated transition probability matrix
+The updated transition probability matrix.
 }
 \description{
-Calculates time-dependent transition probabilities for a Markov model
+Calculates time-dependent transition probabilities for a Markov
+model.
 }
 \examples{
-data(test_data)
-p_mat <- p_matrix_cycle(test_data$p_matrix, age = 55, cycle = 1)
+data(base_params)
+p_mat <- p_matrix_cycle(base_params$p_matrix, age = 55, cycle = 1)
 }

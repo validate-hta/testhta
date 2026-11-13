@@ -1,8 +1,8 @@
 ---
-title: "Automating HTA Model Validation with Unit Tests"
+title: "Automating Tests and AI-Assisted Verification"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Automating HTA Model Validation with Unit Tests}
+  %\VignetteIndexEntry{Automating Tests and AI-Assisted Verification}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -12,75 +12,151 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-
 ```
 
-Health economic evaluations require rigorous validation to ensure that structural logic, cost accounting, and transition probabilities behave as expected. The `testhta` package provides a standardized framework to validate cohort Markov models against established criteria, specifically aligning with the tests outlined in the HTA Verification Registry (T01 - T16).
+This vignette corresponds to **Section 7** (*Automating the Process*) and **Appendix B** (*AI-Assisted Testing for Health Economic Models*) of the tutorial paper, covering:
 
-To make implementation as frictionless as possible, `testhta` includes scaffolding functions that instantly generate a comprehensive test suite tailored to your specific model data.
+1. **Micro-Iteration vs. Macro-Iteration**: Running tests interactively and automating the full suite via `devtools::test()`.
+2. **Scaffolding a Test Suite with `use_hta_unittests()`**: Generating a pre-configured `testthat` test file for your model (`T01` – `T12`).
+3. **AI-Assisted Testing (`model-context.md`)**: Using structured project context files with Large Language Model (LLM) assistants, along with smoke testing and regression testing safeguards.
 
-## Setting Up Your Test Environment
+---
 
-If you are starting a new cost-effectiveness analysis (CEA) project or retrofitting an existing one, you can automatically generate the necessary testing infrastructure using the `use_hta_unittests()` function.
+## 1. Automating the Verification Process
 
-This function creates the standard `tests/testthat/` directory structure required by the `testthat` package and injects a pre-configured test script.
+Wickham and Bryan (2023) define different scales at which automated tests can be run:
 
-### Generating the Skeleton
+- **Micro-iteration**: Running individual `test_that()` blocks interactively in the console during model development and debugging. These checks do not even need to live inside a formal R package to be useful.
+- **Macro-iteration**: Running the entire verification suite at once to ensure that new modifications to the model do not break existing logic.
 
-In your R console, simply run:
+In an R package structure, all tests in `tests/testthat/` can be executed with a single command:
 
-```{r setup-tests, eval=FALSE}
+```{r run-tests, eval = FALSE}
+devtools::test()
+```
+
+When all checks pass, `testthat` outputs a summary report:
+
+```text
+[ FAIL 0 | WARN 0 | SKIP 0 | PASS 3 ]
+```
+
+If a modeller inadvertently introduces a bug—for example, applying the discount factor in the wrong direction so that discounted QALYs exceed undiscounted QALYs—the test suite immediately stops and prints a traceable error referencing the Registry ID (`T06`):
+
+```text
+Failure (test-discounting.R:14:3): T06: Discounted QALYs are lower than undiscounted QALYs
+qaly_discounted["without_drug"] (`actual`) not less than qaly_undiscounted["without_drug"] (`expected`).
+
+[ FAIL 1 | WARN 0 | SKIP 0 | PASS 2 ]
+```
+
+---
+
+## 2. Scaffolding Your Test Environment with `use_hta_unittests()`
+
+To make adopting the `T01` – `T12` verification registry frictionless, `testhta` provides `use_hta_unittests()`. This function creates the `tests/testthat/` directory structure (if needed) and generates a complete test script pre-configured for the 12 registry tests.
+
+### Generating the Default Skeleton
+
+```{r setup-tests, eval = FALSE}
 library(testhta)
 
-# Generate the default test skeleton
+# Generate tests/testthat/test-hta_model.R using 'base_params'
 use_hta_unittests()
-
 ```
 
-By default, this creates a file named `test-hta_model.R` that utilizes a placeholder data object named `test_data`.
+### Customizing the Baseline Parameter Object Name
 
-### Customizing the Data Reference
+If your project stores its baseline model parameters in an object with a different name (e.g., `basecase_params`), pass `data_name` to automatically substitute all dataset references in the generated script:
 
-In practice, your CEA model parameters will likely be stored in a custom list or data frame. You can map the generated tests directly to your project's naming conventions using the `data_name` argument.
-
-For example, if your baseline parameters are stored in an object called `basecase_params`, you can run:
-
-```{r setup-custom, eval=FALSE}
+```{r setup-custom, eval = FALSE}
 use_hta_unittests(data_name = "basecase_params")
-
 ```
 
-The resulting test script will automatically substitute all internal references, ensuring tests like the one below are immediately executable:
+---
 
-```{r example-test, eval=FALSE}
-test_that("T01: QALYs with discount_rate = 1 should be 0", {
-  check_model_qalys(
-    data = basecase_params, 
-    discount_rate = 1, 
-    expected_qalys = 0,
-    label = "T01: QALYs with discount_rate = 1 should be 0"
-  )
-})
+## 3. AI-Assisted Testing for Health Economic Models
 
-```
+Large language model (LLM) assistants (such as Claude) offer a practical opportunity to accelerate the adoption of automated verification in HTA. Rather than replacing the modeller's domain judgement, an LLM can translate conceptual verification requirements from the Test Registry (`T01` – `T12`) into syntactically valid `testthat` code in seconds, acting as a first-draft author that the domain expert then reviews and validates.
 
-## The Verification Registry Suite
+### Standardised Context and Prompts (`model-context.md`)
 
-The generated skeleton includes programmatic checks for 16 standardized HTA validation tests, categorized into four core areas.
-For the complete test matrix, detailed descriptions, and code examples, see the dedicated [**HTA Verification Framework Vignette**](https://validate-hta.github.io/testhta/articles/verification-framework.html) (`vignettes/verification-framework.Rmd`).
+To prevent an LLM from suggesting generic or incompatible code, modellers can place a structured configuration file (e.g., `model-context.md`) in the project root that explicitly defines:
 
+1. **Persona & Scope**
+2. **Structural Contract: Helper Functions** (required setters, getters, and wrappers)
+3. **Test Registry (Source of Truth)** (`T01` – `T12`)
+4. **Coding Standard & Implementation Rules**
 
-## Executing the Test Suite
+With `model-context.md` in the project root, you can prompt an AI assistant:
 
-Once your helper functions are defined and your parameter object is loaded into the environment, you can execute the validation suite.
+> *"Generate the `testthat` code for T06 and T12 based on the provided `model-context.md`."*
 
-**Command Line Execution:**
-You can run the entire suite from the R console using the `devtools` package:
+### Example `model-context.md` Template
 
-```{r run-tests, eval=FALSE}
-devtools::test()
+````markdown
+# AI Agent Project Context: Health Economic Model Verification
 
-```
+## 1. Persona & Scope
+You are an expert Health Economist and R Software Developer. Your goal is to
+write robust, transparent, and reproducible unit tests for HTA models using the
+`testthat` package.
 
-**IDE Integration:**
-If your programming workflow relies on Positron or VS Code, you can leverage their integrated testing environments. Both IDEs automatically detect `testthat` files, allowing you to run, debug, and track the success of individual T01-T16 test blocks directly from the testing pane without manually executing console commands.
+## 2. Structural Contract: Helper Functions
+To ensure modularity and "separation of concerns," all model interactions must
+follow these interface patterns:
+
+* **Required Setters/Mutators** (Must return input object):
+  * `set_discount_rate(input, discount_rate)`
+  * `set_costs(input, scenario, values)`
+  * `set_p_matrix(input, scenario, values)`
+  * `set_utilities(input, scenario, values)`
+  * `set_time_horizon(input, scenario, values)`
+
+* **Required Getters/Accessors**:
+  * `get_qalys(res)`: Extract total QALYs.
+  * `get_costs(res)`: Extract total costs.
+  * `get_le(res)`: Extract life expectancy.
+  * `get_icer(res)`: Extract ICER.
+
+* **Required Wrappers & Utilities**:
+  * `run_model(data, ...)`: Mandatory wrapper.
+  * `compare_model_runs(...)`: Encapsulate comparison logic for different model outputs.
+
+## 3. Test Registry (Source of Truth)
+All automated verification must align with these:
+
+| ID  | Group | Test Condition                 | Expected Result           |
+|-----|-------|--------------------------------|---------------------------|
+| T01 | Pop   | Set relative effects = 1       | Equal LYGs & QALYs        |
+| T02 | Pop   | Set mortality = 0              | LE = time horizon         |
+| T03 | Pop   | Set mortality = 1              | LE = 1                    |
+| T04 | QALY  | Set discount rate = 0 (u=1)    | Total QALYs = LE          |
+| T05 | QALY  | Set utilities = 1              | QALY gains = LYGS         |
+| T06 | QALY  | Positive discount rate         | Disc QALYs < Undisc       |
+| T07 | QALY  | QALY discount rate = inf       | QALYs t>0 -> 0            |
+| T08 | Cost  | Set intervention costs = 0     | ICER is reduced           |
+| T09 | Cost  | Increase intervention costs    | ICER is increased         |
+| T10 | Cost  | Set cost discount rate = 0     | Disc costs = Undisc       |
+| T11 | Cost  | Set cost discount rate = inf   | Costs t>0 -> 0            |
+| T12 | Input | Sampled parameters             | Bounds (e.g. 0-1)         |
+
+## 4. Coding Standard & Implementation Rules
+* **Modular Architecture**: "Separation of concerns" is mandatory. Do not write monolithic scripts.
+* **TDD**: Define expectations based on requirements before writing model functions.
+* **Naming**: Every `test_that()` block must start with its Registry ID.
+* **Tolerance**: Use `tolerance = 0.01` for floating-point comparisons.
+````
+
+### Limitations and Mitigating AI Risks with Smoke and Regression Testing
+
+Modellers must remain vigilant about three failure modes when using AI assistants:
+
+1. **Semantically Inverted Logic**: An LLM may generate syntactically valid code that inverts the intended inequality (e.g., asserting discounted costs are *greater* than undiscounted costs).
+2. **False Sense of Completeness**: An LLM cannot know which clinical assumptions are model-specific versus universal.
+3. **Unreviewed Code**: Every generated test must be read and understood by the modeller before being committed.
+
+Two software testing paradigms are particularly effective for mitigating AI-induced errors:
+
+- **Smoke Testing**: A preliminary check that executes the model pipeline with AI-generated inputs or parameter structures to verify that the model runs to completion without fatal errors or `NaN`s before investing time in deeper validation.
+- **Regression Testing**: Running the comprehensive `T01` – `T12` test suite after any AI-assisted refactoring or feature addition to verify that new edits have not silently broken previously verified baseline model logic.

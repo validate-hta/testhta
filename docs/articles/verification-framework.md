@@ -6,118 +6,127 @@ library(testhta)
 library(testthat)
 ```
 
-## Overview
+## 1. Hierarchy of Testing in Health Economic Modelling
 
-Health Technology Assessment (HTA) models inform critical healthcare
-coverage, pricing, and clinical policy decisions. However, complex
-decision-analytic models are prone to structural bugs, indexing errors,
-and hidden parameter miswirings.
+Testing can be performed at different levels of abstraction. Adapted
+from the software engineering *Test Pyramid* framework (Cohn, 2009),
+automated checks in health economic modelling are organized into three
+structural tiers:
 
-The **HTA Verification Framework** in `testhta` provides a
-software-engineering-inspired methodology for formal model verification.
-Based on seminal frameworks by **Tappenden & Chilcott (2014)** and
-**Elbasha & Dasbach (2017)**, the framework applies automated
-“black-box” unit tests to verify that model code strictly behaves
-according to expected mathematical and economic boundary conditions.
-
-------------------------------------------------------------------------
-
-## Verification Test Registry (T01 – T16)
-
-The framework organizes 16 automated verification test cases into five
-distinct logical categories:
-
-### 1. QALY Bounding Tests
-
-These tests assert quality-adjusted life year (QALY) calculations under
-extreme discount rates and boundary utility weights: - **T01 (Extreme
-Discounting 100%)**: Setting `discount_rate = 1` zeroes out future
-cycles, yielding total QALYs = 0. - **T02 (Upper Bound QALYs)**: Setting
-state utilities = 1 with zero discounting (`discount_rate = 0`) forces
-QALYs to equal total undiscounted Life Expectancy (LE). - **T06
-(Utility-1 Scaling)**: Setting state utilities = 1 yields QALY gains
-equal to Life-Years (LYGs). - **T07 (Discount Directionality)**:
-Standard discounting (e.g. 3.5%) strictly reduces QALYs compared to
-undiscounted runs. - **T08 (Infinite Discounting)**: Infinite discount
-rates (`discount_rate = 1000`) drive future QALY gains to zero.
-
-### 2. Cost Bounding & Sensitivity Tests
-
-These tests check cost accumulation logic and parameter sensitivity: -
-**T06 (Zero Cost Bounding)**: Setting all health state occupancy,
-transition, and intervention costs to 0 must output total costs of 0. -
-**T09 (Zero Intervention Cost)**: Removing intervention costs strictly
-reduces the Incremental Cost-Effectiveness Ratio (ICER). - **T10
-(Increased Intervention Cost)**: Increasing intervention cost strictly
-increases the ICER. - **T11 (Zero Cost Discounting)**: A zero cost
-discount rate ensures discounted costs equal undiscounted costs. - **T12
-(Infinite Cost Discounting)**: An infinite cost discount rate reduces
-future costs to zero.
-
-### 3. Population & Life Expectancy Bounding Tests
-
-These tests verify cohort flow across state transitions: - **T05
-(Absolute Mortality)**: Setting death transition probability = 1 forces
-the cohort to die immediately, yielding Life Expectancy = 1 cycle. -
-**T04 (Zero Mortality)**: Setting death transition probability = 0
-ensures full cohort survival, yielding Life Expectancy equal to the full
-time horizon (`n_cycles`).
-
-### 4. Treatment Arm Comparison & Symmetry Tests
-
-These tests verify parameter wiring and symmetry across model arms: -
-**T14 (Arm Parameter Equivalence)**: Setting all treatment-specific
-parameters equal across arms ($`\theta_a = \theta_b`$) yields identical
-costs and QALYs (zero incremental outcomes). - **T15 (Parameter
-Sensitivity Sweep)**: Modifying an individual parameter for a treatment
-arm ($`\theta_a \neq \theta_b`$) must alter the ICER, confirming
-parameter wiring. - **T16 (Arm Parameter Swapping)**: Swapping parameter
-vectors between arms ($`\theta_a \leftrightarrow \theta_b`$) swaps
-output costs and QALYs between those arms.
-
-### 5. Probabilistic Sensitivity Analysis (PSA) Sampling Tests
-
-These tests check parameter distribution limits before running Monte
-Carlo simulations: - **T13 (Distribution Bounding)**: Verifies that PSA
-parameter draws strictly lie within theoretical domain limits (e.g.,
-Beta utilities/probabilities $`\in [0, 1]`$, Lognormal costs $`> 0`$).
+1.  **Level 1: Unit Testing (Lowest Level — Fast, High Isolation)**\
+    Isolates the smallest testable parts of an application
+    (“units”)—typically a single, self-contained helper function—and
+    verifies that they function correctly (e.g., a function that
+    converts a rate to a probability, applies a discount factor, or
+    draws a parameter sample).
+2.  **Level 2: Integration Testing (Middle Level — Subcomponent
+    Interaction)**\
+    Verifies that multiple components (input structures, transition
+    matrices, simulation loops, and summary extractors) interact
+    correctly to produce logically sound results. Because health
+    economic models frequently lack a simple “test oracle” for complex
+    multi-state traces, executing
+    [`run_model()`](https://validate-hta.github.io/testhta/reference/run_model.md)
+    under controlled boundary conditions to check summary outputs like
+    QALYs, Life Expectancy (LE), and ICERs primarily operates at this
+    integration level.
+3.  **Level 3: System or End-to-End Testing (Highest Level — Full
+    Pipeline)**\
+    Executes the entire decision-analytic pipeline from raw data
+    ingestion to final policy outputs (e.g., running a 10,000-iteration
+    Probabilistic Sensitivity Analysis (PSA) pipeline to verify that it
+    completes without memory leaks, handles missing data gracefully, and
+    outputs a valid ICER and CEAC).
 
 ------------------------------------------------------------------------
 
-## Verification Test Summary Matrix
+## 2. Why Use `testthat` Instead of Ad-Hoc Console Checks?
 
-| Group | Test Case ID | Boundary / Verification Condition | Expected Behavior | Verification Helper / Code |
-|:---|:---|:---|:---|:---|
-| **QALY Bounding** | **T01** | Set discount rate to `100%` (`discount_rate = 1`) | QALYs must equal `0` | `check_model_qalys(0, ...)` |
-| **QALY Bounding** | **T02** | Set utilities to `1`, discount to `0` | QALYs must equal Life Expectancy | `expect_equal(get_qalys(r), get_le(r))` |
-| **QALY Bounding** | **T06** | Set utilities for living states to `1` | QALY gains equal Life-Years (LYGs) | `expect_equal(get_qalys(r), r$total_LYs)` |
-| **QALY Bounding** | **T07** | Standard discounting vs. undiscounted | Discounted QALYs strictly less than undiscounted | `compare_model_runs(..., expect_lt)` |
-| **QALY Bounding** | **T08** | Infinite discount rate (`discount_rate = 1000`) | QALYs tend to zero | `check_model_qalys(0, ...)` |
-| **Cost Bounding** | **T06** | Set all cost parameters to `0` | Total costs must equal `0` | `check_model_costs(0, ...)` |
-| **Cost Bounding** | **T09** | Set intervention costs to `0` | ICER is reduced | `compare_model_runs(get_icer, expect_lt)` |
-| **Cost Bounding** | **T10** | Increase intervention costs | ICER is increased | `compare_model_runs(get_icer, expect_gt)` |
-| **Cost Bounding** | **T11** | Zero cost discount rate (`discount_rate = 0`) | Discounted costs equal undiscounted costs | `compare_model_runs(get_costs, expect_equal)` |
-| **Cost Bounding** | **T12** | Infinite cost discount rate (`discount_rate = 1000`) | Costs tend to zero | `check_model_costs(0, ...)` |
-| **Population / LE** | **T05** | Transition to death state set to `1` | Life Expectancy must equal `1` cycle | `check_model_le(1, ...)` |
-| **Population / LE** | **T04** | Transition to death state set to `0` | Life Expectancy equals `n_cycles` | `check_model_le(n_cycles, ...)` |
-| **Treatment Arm** | **T14** | Set all treatment parameters equal ($`\theta_a = \theta_b`$) | Costs and QALYs equal across arms | `expect_equal(get_incremental_costs(r), 0)` |
-| **Treatment Arm** | **T15** | Amend individual model parameter ($`\theta_a \neq \theta_b`$) | ICER is modified (verifies parameter sensitivity) | `compare_model_runs(get_icer, expect_false)` |
-| **Treatment Arm** | **T16** | Swap treatment-specific parameters ($`\theta_a \leftrightarrow \theta_b`$) | QALYs and costs swap between arms | `expect_equal(costs_swapped["arm1"], costs_base["arm2"])` |
-| **PSA / Sampling** | **T13** | Draw $`n`$ samples from parameter distributions | All drawn values satisfy domain bounds (e.g. Beta $`\in [0,1]`$, Lognormal $`>0`$) | `expect_true(all(u >= 0 & u <= 1))` |
+The `testthat` package (Wickham, 2011) is the standard framework for
+automated testing in R. To set up an R package or project to use
+`testthat` (edition 3), run:
+
+``` r
+
+usethis::use_testthat(3)
+```
+
+This creates the `tests/testthat/` directory and `tests/testthat.R`
+runner script. Automated checks in `testthat` are written as
+**expectations** (functions starting with `expect_`, such as
+[`expect_equal()`](https://testthat.r-lib.org/reference/equality-expectations.html),
+[`expect_lt()`](https://testthat.r-lib.org/reference/comparison-expectations.html),
+[`expect_gt()`](https://testthat.r-lib.org/reference/comparison-expectations.html),
+[`expect_true()`](https://testthat.r-lib.org/reference/logical-expectations.html))
+grouped inside `test_that("<description>", { ... })` blocks.
+
+Unlike ad-hoc console checks using raw operators (`== 0` or `<`), which
+return a generic `FALSE` or fail silently unless manually inspected each
+time a script is run, `testthat` expectations act as automated
+diagnostic tools. When an expectation fails, `testthat` immediately
+flags the exact test requirement ID, file, line number, and numerical
+discrepancy between actual and expected values.
+
+------------------------------------------------------------------------
+
+## 3. Health Economic Modelling Test Suite (`T01` – `T12`)
+
+Table 1 below presents the standardized suite of 12 verification tests,
+extreme-value checks, and logical assertions adapted from established
+HTA quality-assurance frameworks:
+
+- Internal consistency and extreme-value checks (McCabe & Dixon, 2000)
+- Comprehensive “black-box” verification criteria (Tappenden & Chilcott,
+  2014)
+- Automated decision-analytic checking principles (Dasbach & Elbasha,
+  2017)
+- Technical verification standards reinforced by the CHEERS statement
+  (Husereau et al., 2013)
+
+| ID | Group | Test Condition | Expected Result |
+|:---|:---|:---|:---|
+| **T01** | Population | Treatment effect the same for all treatments, e.g., Set relative treatment effects (OR, HR, RR) $`= 1`$ | All treatments produce equal estimates of total LYGs and total QALYs |
+| **T02** | Population | Set mortality rates (or corresponding transition probabilities) $`= 0`$ | $`\text{LE} = \text{time horizon}`$ (assuming a fixed, finite time horizon to avoid an infinite loop) |
+| **T03** | Population | Set mortality rates (or corresponding transition probabilities) to produce a probability of $`1`$ | $`\text{LE} = 1\text{ cycle}`$ (or $`0.5`$ depending on within-cycle correction implementation) |
+| **T04** | QALY | Set discount rate $`= 0`$ (assuming utility $`= 1`$ for all living health states) | Total QALYs equal LE |
+| **T05** | QALY | Set all living health state utility parameters $`= 1`$ | QALY gains exactly equal LYGs |
+| **T06** | QALY | Apply standard positive discount rate vs. $`0`$ rate | $`\text{Discounted QALYs} < \text{undiscounted QALYs } \forall \text{ treatments}`$ |
+| **T07** | QALY | Set QALY discount rate $`= \infty`$ | QALY gains after time $`0`$ equal zero |
+| **T08** | Cost | Set intervention costs $`= 0`$ | ICER is reduced$`^\dagger`$ |
+| **T09** | Cost | Increase intervention costs | ICER is increased$`^\dagger`$ |
+| **T10** | Cost | Set cost discount rate $`= 0`$ | Total costs equal the raw arithmetic sum of unadjusted state costs $`\forall`$ treatments (and discounted costs $`<`$ undiscounted costs) |
+| **T11** | Cost | Set cost discount rate $`= \infty`$ | Costs after time $`0`$ equal zero |
+| **T12** | Input | Sample parameters from probabilistic distributions | Range of sampled values does not violate distribution boundaries, `NaN`s, or critical numerical precision errors |
+
+> $`^\dagger`$**Note on ICER Directionality (`T08` & `T09`)**: Assuming
+> a controlled test environment where baseline Incremental Effects
+> ($`\text{IE}`$) are known to be strictly positive ($`\text{IE} > 0`$).
+> In `testthat`, this assumption can be guarded explicitly using
+> `testthat::skip_if_not(inc_qalys > 0, ...)`. If evaluating a scenario
+> with negative incremental health effects, the verification logic
+> should isolate Incremental Costs ($`\text{IC}`$) instead.
+>
+> **Note on Within-Cycle Correction (`T03`)**: In models applying a
+> standard half-cycle (or within-cycle) correction, setting mortality to
+> $`100\%`$ in the first cycle will conceptually result in a life
+> expectancy of $`0.5`$ cycles rather than $`1.0`$ cycle.
 
 ------------------------------------------------------------------------
 
 ## References
 
-1.  **Tappenden, P., & Chilcott, J. B.** (2014). Avoiding and
+1.  **Cohn, M.** (2009). *Succeeding with Agile: Software Development
+    Using Scrum*. Addison-Wesley Professional.
+2.  **Wickham, H.** (2011). testthat: Get Started with Testing. *The R
+    Journal*, 3, 5–10.
+3.  **McCabe, C., & Dixon, S.** (2000). Testing the Validity of
+    Cost-Effectiveness Models. *PharmacoEconomics*, 17(5), 501–513.
+4.  **Tappenden, P., & Chilcott, J. B.** (2014). Avoiding and
     Identifying Errors and Other Threats to the Credibility of Health
     Economic Models. *PharmacoEconomics*, 32, 967–979.
-    <https://doi.org/10.1007/s40273-014-0186-2>
-2.  **Elbasha, E. H., & Dasbach, E. J.** (2017). Verification of
+5.  **Dasbach, E. J., & Elbasha, E. H.** (2017). Verification of
     Decision-Analytic Models for Health Economic Evaluations: An
     Overview. *PharmacoEconomics*, 35, 673–683.
-    <https://doi.org/10.1007/s40273-017-0508-2>
-3.  **Alarid-Escudero, F., et al.** (2019). A Need for Change! A Coding
-    Framework for Improving Transparency in Decision Modeling.
-    *PharmacoEconomics*, 37(11), 1329–1339.
-    <https://doi.org/10.1007/s40273-019-00837-x>
+6.  **Husereau, D., et al.** (2013). Consolidated Health Economic
+    Evaluation Reporting Standards (CHEERS) Statement. *European Journal
+    of Health Economics*, 14(3), 367–372.

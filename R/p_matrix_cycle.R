@@ -1,21 +1,24 @@
-
 #' @title Time-dependent probability matrix
-#' 
-#' @description Calculates time-dependent transition probabilities for a Markov model
-#' 
-#' @param p_matrix The base transition probability matrix
-#' @param age The age of the individual
-#' @param cycle The current cycle number
-#' @param tpProg The probability of progression from asymptomatic to progressive disease
-#' @param tpDcm The probability of death from progressive disease
-#' @param effect The effectiveness of the drug
-#' @param p_healthy_death Optional override for transition probability from healthy to dead
-#' @param p_sick_death Optional override for transition probability from sick to dead
-#' @param ... Extra arguments
-#' @return The updated transition probability matrix
+#'
+#' @description Calculates time-dependent transition probabilities for a Markov
+#'   model.
+#'
+#' @param p_matrix The base transition probability matrix.
+#' @param age The age of the individual.
+#' @param cycle The current cycle number.
+#' @param tpProg The probability of progression from asymptomatic to
+#'   progressive disease.
+#' @param tpDcm The probability of death from progressive disease.
+#' @param effect The effectiveness of the drug.
+#' @param p_healthy_death Optional override for transition probability from
+#'   healthy to dead.
+#' @param p_sick_death Optional override for transition probability from sick
+#'   to dead.
+#' @param ... Extra arguments.
+#' @return The updated transition probability matrix.
 #' @examples
-#' data(test_data)
-#' p_mat <- p_matrix_cycle(test_data$p_matrix, age = 55, cycle = 1)
+#' data(base_params)
+#' p_mat <- p_matrix_cycle(base_params$p_matrix, age = 55, cycle = 1)
 #' @export
 p_matrix_cycle <- function(p_matrix, age, cycle,
                            tpProg = 0.01,
@@ -24,13 +27,13 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
                            p_healthy_death = NULL,
                            p_sick_death = NULL,
                            ...) {
-
-  age_grp <- cut(age, breaks = c(34,44,54,64,74,84,Inf))
+  age_grp <- cut(age, breaks = c(34, 44, 54, 64, 74, 84, Inf))
   tpDn <- tpDn_lookup()[age_grp]
-  
-  # Check if p_matrix was pre-configured with all 1 or all 0 for transitions from alive states to Dead
+
+  # Check if p_matrix was pre-configured with all 1 or all 0 for transitions
+  # from alive states to Dead
   alive_states <- c("Asymptomatic", "Progressive")
-  
+
   if (all(p_matrix[alive_states, "Dead", ] == 1)) {
     p_healthy_death <- 1
     p_sick_death <- 1
@@ -42,7 +45,7 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
   if (!is.null(p_healthy_death)) {
     tpDn <- p_healthy_death
   }
-  
+
   tpProg_dead_without <- tpDcm + tpDn
   tpProg_dead_with <- tpDcm + tpDn
   if (!is.null(p_sick_death)) {
@@ -50,10 +53,11 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
     tpProg_dead_with <- p_sick_death
   }
 
-  # Determine treatment effect for without_drug and with_drug based on input p_matrix
+  # Determine treatment effect for without_drug and with_drug based on input
+  # p_matrix
   p_without <- p_matrix["Asymptomatic", "Progressive", "without_drug"]
   p_with <- p_matrix["Asymptomatic", "Progressive", "with_drug"]
-  
+
   if (isTRUE(all.equal(p_without, p_with))) {
     eff_without <- 0
     eff_with <- 0
@@ -76,11 +80,13 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
   # Matrix containing transition probabilities for without_drug
   p_matrix["Asymptomatic", "Progressive", "without_drug"] <- tpProg_cycle_without
   p_matrix["Asymptomatic", "Dead", "without_drug"] <- tpDn
-  p_matrix["Asymptomatic", "Asymptomatic", "without_drug"] <- 1 - tpProg_cycle_without - tpDn
+  p_matrix["Asymptomatic", "Asymptomatic", "without_drug"] <-
+    1 - tpProg_cycle_without - tpDn
   p_matrix["Progressive", "Dead", "without_drug"] <- tpProg_dead_without
-  p_matrix["Progressive", "Progressive", "without_drug"] <- 1 - tpProg_dead_without
+  p_matrix["Progressive", "Progressive", "without_drug"] <-
+    1 - tpProg_dead_without
   p_matrix["Dead", "Dead", "without_drug"] <- 1
-  
+
   # Matrix containing transition probabilities for with_drug
   p_matrix["Asymptomatic", "Progressive", "with_drug"] <- tpProg_cycle_with
   p_matrix["Asymptomatic", "Dead", "with_drug"] <- tpDn
@@ -89,16 +95,18 @@ p_matrix_cycle <- function(p_matrix, age, cycle,
   p_matrix["Progressive", "Dead", "with_drug"] <- tpProg_dead_with
   p_matrix["Progressive", "Progressive", "with_drug"] <- 1 - tpProg_dead_with
   p_matrix["Dead", "Dead", "with_drug"] <- 1
-  
+
   return(p_matrix)
 }
 
 # Look-up table for age-specific probabilities of death from non-disease causes
 tpDn_lookup <- function() {
-  c("(34,44]" = 0.0017,
+  c(
+    "(34,44]" = 0.0017,
     "(44,54]" = 0.0044,
     "(54,64]" = 0.0138,
     "(64,74]" = 0.0379,
     "(74,84]" = 0.0912,
-    "(84,Inf]" = 0.1958)
+    "(84,Inf]" = 0.1958
+  )
 }

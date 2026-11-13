@@ -18,6 +18,6 @@ The modified list of parameters.
 Set discount rate
 }
 \examples{
-data(test_data)
-updated <- set_discount_rate(test_data, 0.05)
+data(base_params)
+updated <- set_discount_rate(base_params, 0.05)
 }

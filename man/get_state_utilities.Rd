@@ -12,12 +12,13 @@ get_state_utilities(input, arm = NULL)
 \item{arm}{Optional treatment arm name (character) or index.}
 }
 \value{
-A vector of state utilities for the specified arm, or the full utility matrix if arm is NULL.
+A vector of state utilities for the specified arm, or the full
+utility matrix if \code{arm} is \code{NULL}.
 }
 \description{
 Getter for state utilities
 }
 \examples{
-data(test_data)
-get_state_utilities(test_data, "without_drug")
+data(base_params)
+get_state_utilities(base_params, "without_drug")
 }

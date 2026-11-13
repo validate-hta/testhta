@@ -12,7 +12,8 @@ get_le(res, arm = NULL)
 
 - res:
 
-  A list of results returned by ce_markov.
+  A list of results returned by
+  [`ce_markov()`](https://validate-hta.github.io/testhta/reference/ce_markov.md).
 
 - arm:
 
@@ -21,17 +22,17 @@ get_le(res, arm = NULL)
 ## Value
 
 A numeric vector of total life expectancy by treatment, or a single
-numeric value if arm is specified.
+numeric value if `arm` is specified.
 
 ## Examples
 
 ``` r
-data(test_data)
-res <- run_model(test_data)
+data(base_params)
+res <- run_model(base_params)
 get_le(res)
 #> without_drug    with_drug 
-#>     12.06416     12.68332 
+#>     12064.16     12683.32 
 get_le(res, "with_drug")
 #> with_drug 
-#>  12.68332 
+#>  12683.32 
 ```

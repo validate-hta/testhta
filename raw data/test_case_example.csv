@@ -1,17 +1,13 @@
-Test Case ID,Test Scenario,Test Case,Test Data,Expected Results,Actual Results,Pass/Fail,Description,Source
-T01,QALY estimation,discount rate = 1,,All QALYS = 0,,,,
-T02,QALY estimation,discount rate = 0,,QALYS = LE,,,,
-T03,Clinical trajectory,"OR,HR,RR = 1",,All treatments produce equal estimates of total LYGs and total QALYs,,,"Set relative treatment effect (odds ratios, relative risks or hazard ratios) parameter(s) to 1.0 (including adverse events)",Tappenden (2014)
-T04,Clinical trajectory,sum(prob in state s) for all s,,Total probability equals 1.0,,,Sum expected health state populations at any model timepoint (state transition models),Tappenden (2014)
-T05,Clinical trajectory,sum(prob node s) for all terminal nodes s,,Total probability equals 1.0,,,Sum expected probability of terminal nodes (decisiontree models),Tappenden (2014)
-T06,QALY estimation,,,QALY gains equal LYGs,,,Set all health utility for living states parameters to 1.0,Tappenden (2014)
-T07,QALY estimation,,,Discounted QALYs = undiscounted QALYs for all treatments,,,Set QALY discount rate to 0,Tappenden (2014)
-T08,QALY estimation,,,QALY gain after time 0 tend towards zero,,,Set QALY discount rate equal to very large number,Tappenden (2014)
-T09,Cost estimation,,,ICER is reduced,,,Set intervention costs to 0,Tappenden (2014)
-T10,Cost estimation,,,ICER is increased,,,Increase intervention cost,Tappenden (2014)
-T11,Cost estimation,discount rate = 0,,Discounted costs = undiscounted costs for all treatments,,,Set cost discount rate to 0,Tappenden (2014)
-T12,Cost estimation,discount rate = Inf,,Costs after time 0 tend towards zero,,,Set cost discount rate equal to very large number,Tappenden (2014)
-T13,Input parameters,,,"Range of sampled parameter values does not violate characteristics of statistical distribution used to describe parameter (e.g., samples from beta distribution lie in range 0\x \1, samples from lognormal distribution lie in range x[0, etc.)",,,Produce n samples of model parameter m,Tappenden (2014)
-T14,General,"theta_a = theta_b for all a,b",,Costs and QALYs equal for all treatments,,,Set all treatment-specific parameters equal for all treatment groups,Tappenden (2014)
-T15,General,"theta_a != theta_b for all a,b",,ICER is changed,,,Amend value of each individual model parameter,Tappenden (2014)
-T16,General,"theta_a <- theta_b, theta_b <- theta_a for all a,b",,QALYs and costs for each option should be switched,,,Switch all treatment-specific parameter values,Tappenden (2014)
+ID,Group,Test Condition,Expected Result,Source
+T01,Population,"Treatment effect the same for all treatments, e.g., Set relative treatment effects (OR, HR, RR) = 1",All treatments produce equal estimates of total LYGs and total QALYs,"Tappenden & Chilcott (2014); Green, Gallardo, & Lamrock (2026)"
+T02,Population,Set mortality rates (or corresponding transition probabilities) = 0,"LE = time horizon (assuming a fixed, finite time horizon to avoid an infinite loop)","McCabe & Dixon (2000); Green, Gallardo, & Lamrock (2026)"
+T03,Population,Set mortality rates (or corresponding transition probabilities) to produce a probability of 1,LE = 1 cycle (or 0.5 depending on within-cycle correction implementation),"McCabe & Dixon (2000); Green, Gallardo, & Lamrock (2026)"
+T04,QALY,Set discount rate = 0 (assuming utility = 1 for all living health states),Total QALYs equal LE,"Tappenden & Chilcott (2014); Green, Gallardo, & Lamrock (2026)"
+T05,QALY,Set all living health state utility parameters = 1,QALY gains exactly equal LYGs,"Tappenden & Chilcott (2014); Green, Gallardo, & Lamrock (2026)"
+T06,QALY,Apply standard positive discount rate vs. 0 rate,Discounted QALYs < undiscounted QALYs for all treatments,"Dasbach & Elbasha (2017); Green, Gallardo, & Lamrock (2026)"
+T07,QALY,Set QALY discount rate = Inf,QALY gains after time 0 equal zero,"Tappenden & Chilcott (2014); Green, Gallardo, & Lamrock (2026)"
+T08,Cost,Set intervention costs = 0,ICER is reduced (assuming positive baseline incremental effects),"Tappenden & Chilcott (2014); Green, Gallardo, & Lamrock (2026)"
+T09,Cost,Increase intervention costs,ICER is increased (assuming positive baseline incremental effects),"Tappenden & Chilcott (2014); Green, Gallardo, & Lamrock (2026)"
+T10,Cost,Set cost discount rate = 0,Total costs exactly equal the raw arithmetic sum of unadjusted state costs for all treatments (and discounted < undiscounted),"Tappenden & Chilcott (2014); Green, Gallardo, & Lamrock (2026)"
+T11,Cost,Set cost discount rate = Inf,Costs after time 0 equal zero,"Tappenden & Chilcott (2014); Green, Gallardo, & Lamrock (2026)"
+T12,Input,Sample parameters from probabilistic distributions,"Range of sampled values does not violate distribution boundaries, NaNs, or critical numerical precision errors","Tappenden & Chilcott (2014); Green, Gallardo, & Lamrock (2026)"

@@ -7,9 +7,9 @@
 run_model(data, ...)
 }
 \arguments{
-\item{data}{A list of base parameters.}
+\item{data}{A list of base parameters (e.g., \code{base_params}).}
 
-\item{...}{Overrides for parameters or helper arguments.}
+\item{...}{Overrides for parameters passed to \code{ce_markov()}.}
 }
 \value{
 A list of model simulation results.
@@ -18,6 +18,6 @@ A list of model simulation results.
 Run Markov model with parameters and overrides
 }
 \examples{
-data(test_data)
-res <- run_model(test_data, discount_rate = 0.05)
+data(base_params)
+res <- run_model(base_params, discount_rate = 0.05)
 }

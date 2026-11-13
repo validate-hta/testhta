@@ -42,10 +42,10 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-guides">
-<li><a class="dropdown-item" href="articles/basic-tests.html">Writing Basic Bounding Tests</a></li>
-    <li><a class="dropdown-item" href="articles/validation-guide.html">HTA Model Bounding &amp; Validation</a></li>
-    <li><a class="dropdown-item" href="articles/verification-framework.html">The HTA Verification Framework</a></li>
-    <li><a class="dropdown-item" href="articles/automating-hta-unit-tests.html">Automating HTA Model Validation with Unit Tests</a></li>
+<li><a class="dropdown-item" href="articles/verification-framework.html">The HTA Verification Framework (T01–T12)</a></li>
+    <li><a class="dropdown-item" href="articles/basic-tests.html">R Test Code Examples</a></li>
+    <li><a class="dropdown-item" href="articles/validation-guide.html">Custom Expectations and Advanced Testing</a></li>
+    <li><a class="dropdown-item" href="articles/automating-hta-unit-tests.html">Automating Tests and AI-Assisted Verification</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
@@ -66,18 +66,18 @@
 </div>
 <!-- badges: start -->
 
-<p><strong>A Unit Testing and Verification Framework for Health Technology Assessment (HTA) Models</strong></p>
-<p><code>testhta</code> provides a robust, software-engineering-inspired framework for applying <strong>unit testing</strong> and <strong>behavioral verification</strong> to health economic and health technology assessment (HTA) models. By leveraging the <a href="https://testthat.r-lib.org/" class="external-link"><code>testthat</code></a> testing framework, <code>testhta</code> enables modelers to write automated checks that verify mathematical, logical, and structural correctness under boundary conditions. The package includes a built-in cohort Markov model as a demonstration environment, showing how to define, group, and execute these checks in practice.</p>
-<p>Ensuring HTA model quality should not require manual spreadsheet audits. <code>testhta</code> makes verification automated, reproducible, and transparent—enhancing decision-maker confidence in cost-effectiveness results.</p>
+<p><strong>Automated Verification and Unit Testing for Health Economic and HTA Models in R</strong></p>
+<p><code>testhta</code> provides a practical, software-engineering-inspired framework for applying <strong>automated verification</strong> (unit, integration, and system testing) to health economic and health technology assessment (HTA) models in R. Built around the <a href="https://testthat.r-lib.org/" class="external-link"><code>testthat</code></a> package, <code>testhta</code> accompanies the tutorial paper <em>“Automated Verification for Health Economic Models in R: A Hands-On Tutorial”</em> (Green, Gallardo, &amp; Lamrock, 2026) and includes a complete 3-state discrete-time cohort Markov model case study and verification test suite.</p>
+<p>Ensuring HTA model quality should not rely solely on ad-hoc console checks or manual spreadsheet audits. <code>testhta</code> makes verification automated, reproducible, and transparent—proactively catching silent logic bugs before they influence reimbursement decisions.</p>
 <hr>
 <div class="section level2">
 <h2 id="key-features">Key Features<a class="anchor" aria-label="anchor" href="#key-features"></a>
 </h2>
 <ul>
-<li>🧪 <strong>Verification Helpers</strong>: Out-of-the-box functions to test model behavior against expected bounds (<code><a href="reference/check_model_qalys.html">check_model_qalys()</a></code>, <code><a href="reference/check_model_costs.html">check_model_costs()</a></code>, <code><a href="reference/check_model_le.html">check_model_le()</a></code>).</li>
-<li>🔄 <strong>Relational Comparators</strong>: Compare model behaviors across parameter spaces using <code><a href="reference/compare_model_runs.html">compare_model_runs()</a></code> (e.g., verifying that discounting reduces future values).</li>
-<li>🔗 <strong>Tidy Test API</strong>: Modify parameters cleanly using setter functions (<code><a href="reference/set_discount_rate.html">set_discount_rate()</a></code>, <code><a href="reference/set_time_horizon.html">set_time_horizon()</a></code>) integrated with the base R pipe (<code>|&gt;</code>) to isolate test runs.</li>
-<li>⚙️ <strong>Markov Engine Example Case Study</strong>: An example discrete-time cohort Markov simulation environment built with time-dependent transitions, discounting, and state/transition-specific costs and utilities to demonstrate the test framework.</li>
+<li>🧪 <strong>Custom Verification Expectations</strong>: High-level wrapper expectations (<code><a href="reference/check_model_qalys.html">check_model_qalys()</a></code>, <code><a href="reference/check_model_costs.html">check_model_costs()</a></code>, <code><a href="reference/check_model_le.html">check_model_le()</a></code>, <code><a href="reference/check_model_le_pp.html">check_model_le_pp()</a></code>) to verify model outputs against expected boundary values.</li>
+<li>🔄 <strong>Relational Model Comparators</strong>: Compare outputs across parameter configurations using <code><a href="reference/compare_model_runs.html">compare_model_runs()</a></code> (e.g., verifying that positive discounting reduces future QALYs and costs, or that removing intervention costs reduces the ICER).</li>
+<li>🔗 <strong>Modular Helper Interface</strong>: Isolate model internals from test scripts using getters (<code><a href="reference/get_qalys.html">get_qalys()</a></code>, <code><a href="reference/get_costs.html">get_costs()</a></code>, <code><a href="reference/get_le.html">get_le()</a></code>, <code><a href="reference/get_le_pp.html">get_le_pp()</a></code>, <code><a href="reference/get_icer.html">get_icer()</a></code>) and pipe-friendly setters (<code><a href="reference/set_discount_rate.html">set_discount_rate()</a></code>, <code><a href="reference/set_time_horizon.html">set_time_horizon()</a></code>, <code><a href="reference/set_costs.html">set_costs()</a></code>, <code><a href="reference/set_utilities.html">set_utilities()</a></code>, <code><a href="reference/set_p_matrix.html">set_p_matrix()</a></code>) alongside the <code><a href="reference/run_model.html">run_model()</a></code> wrapper.</li>
+<li>⚙️ <strong>Executable Case Study &amp; Scaffolding</strong>: Includes the 3-state (<code>Asymptomatic</code>, <code>Progressive</code>, <code>Dead</code>) cohort Markov model (<code><a href="reference/ce_markov.html">ce_markov()</a></code>), baseline parameters (<code>base_params</code>), end-to-end tutorial test script (<code>inst/tutorial-paper/run-model-tests.R</code>), and <code><a href="reference/use_hta_unittests.html">use_hta_unittests()</a></code> to scaffold the test suite in your own project.</li>
 </ul>
 <hr>
 </div>
@@ -87,89 +87,91 @@
 <p>You can install the development version of <code>testhta</code> from GitHub:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("devtools")</span></span>
-<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/install-deprecated.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"n8thangreen/testhta"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/install-deprecated.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"validate-hta/testhta"</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="quick-start-build-run-and-verify">Quick Start: Build, Run, and Verify<a class="anchor" aria-label="anchor" href="#quick-start-build-run-and-verify"></a>
 </h2>
-<p>Here is a basic example demonstrating how to run a cohort Markov model and verify the economic logic of discounting using the tidy API.</p>
+<p>Here is a basic example demonstrating how to run the cohort Markov model case study and verify economic discounting logic.</p>
 <div class="section level3">
 <h3 id="id_1-set-up-and-run-the-model">1. Set Up and Run the Model<a class="anchor" aria-label="anchor" href="#id_1-set-up-and-run-the-model"></a>
 </h3>
-<p>We use the package’s built-in baseline dataset <code>test_data</code> to execute a cost-effectiveness model.</p>
+<p>We use the package’s built-in baseline parameter list <code>base_params</code> (a cohort of <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>1000</mn></mrow><annotation encoding="application/x-tex">n = 1000</annotation></semantics></math> patients simulated over <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>n</mi><mtext mathvariant="normal">cycles</mtext></msub><mo>=</mo><mn>15</mn></mrow><annotation encoding="application/x-tex">n_{\text{cycles}} = 15</annotation></semantics></math> cycles at a <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3.5</mn><mi>%</mi></mrow><annotation encoding="application/x-tex">3.5\%</annotation></semantics></math> discount rate) to execute the cost-effectiveness model.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://validate-hta.github.io/testhta/">testhta</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Load baseline dataset</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">test_data</span><span class="op">)</span></span>
+<span><span class="co"># Load baseline parameters</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">base_params</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Run the Markov simulation</span></span>
-<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_model.html">run_model</a></span><span class="op">(</span><span class="va">test_data</span><span class="op">)</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/run_model.html">run_model</a></span><span class="op">(</span><span class="va">base_params</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Extract key HTA outputs using getters</span></span>
 <span><span class="fu"><a href="reference/get_qalys.html">get_qalys</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   without_drug      with_drug </span></span>
-<span><span class="co">#&gt;       11.45892       12.12450 </span></span>
+<span><span class="co">#&gt; without_drug    with_drug </span></span>
+<span><span class="co">#&gt;     8394.580     8981.496 </span></span>
 <span></span>
 <span><span class="fu"><a href="reference/get_costs.html">get_costs</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   without_drug      with_drug </span></span>
-<span><span class="co">#&gt;       22354.21       34211.55 </span></span>
+<span><span class="co">#&gt; without_drug    with_drug </span></span>
+<span><span class="co">#&gt;      1147099      4865536 </span></span>
+<span></span>
+<span><span class="fu"><a href="reference/get_le_pp.html">get_le_pp</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span></span>
+<span><span class="co">#&gt; without_drug    with_drug </span></span>
+<span><span class="co">#&gt;     12.06416     12.68332 </span></span>
 <span></span>
 <span><span class="fu"><a href="reference/get_icer.html">get_icer</a></span><span class="op">(</span><span class="va">results</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 17814.77</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 6335.546</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="id_2-modify-parameters-with-pipe-setters">2. Modify Parameters with Pipe Setters<a class="anchor" aria-label="anchor" href="#id_2-modify-parameters-with-pipe-setters"></a>
 </h3>
 <p>Easily perform scenario analyses or sensitivity sweeps by piping parameter modifications:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Evaluate a 10-year time horizon with no discounting</span></span>
-<span><span class="va">scenario_results</span> <span class="op">&lt;-</span> <span class="va">test_data</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="co"># Evaluate a 10-cycle time horizon with no discounting</span></span>
+<span><span class="va">scenario_results</span> <span class="op">&lt;-</span> <span class="va">base_params</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/set_time_horizon.html">set_time_horizon</a></span><span class="op">(</span><span class="fl">10</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/set_discount_rate.html">set_discount_rate</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="reference/run_model.html">run_model</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/get_icer.html">get_icer</a></span><span class="op">(</span><span class="va">scenario_results</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 12903.45</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 11902.39</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="id_3-automated-validation-assertions">3. Automated Validation Assertions<a class="anchor" aria-label="anchor" href="#id_3-automated-validation-assertions"></a>
+<h3 id="id_3-automated-verification-assertions">3. Automated Verification Assertions<a class="anchor" aria-label="anchor" href="#id_3-automated-verification-assertions"></a>
 </h3>
-<p><code>testhta</code> provides assertion functions that integrate seamlessly into standard R package tests (using <code>testthat</code>).</p>
+<p><code>testhta</code> integrates directly with <code>testthat</code> to express verification checks from the HTA Test Registry (<code>T01</code>–<code>T12</code>):</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://testthat.r-lib.org" class="external-link">testthat</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Verify that QALYs with standard discounting (3.5%) are strictly less </span></span>
-<span><span class="co"># than QALYs without discounting</span></span>
+<span><span class="co"># T06: Verify that QALYs with standard discounting (3.5%) are strictly less</span></span>
+<span><span class="co"># than QALYs without discounting (0%)</span></span>
 <span><span class="fu"><a href="reference/compare_model_runs.html">compare_model_runs</a></span><span class="op">(</span></span>
 <span>  extractor_fn <span class="op">=</span> <span class="va">get_qalys</span>,</span>
 <span>  comparison_fn <span class="op">=</span> <span class="va">expect_lt</span>,</span>
 <span>  params_1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>discount_rate <span class="op">=</span> <span class="fl">0.035</span><span class="op">)</span>,</span>
 <span>  params_2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>discount_rate <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  label <span class="op">=</span> <span class="st">"Discounted QALYs are lower than undiscounted QALYs"</span></span>
+<span>  data <span class="op">=</span> <span class="va">base_params</span>,</span>
+<span>  label <span class="op">=</span> <span class="st">"T06: Discounted should be less than undiscounted QALYs"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
 </div>
 <div class="section level2">
-<h2 id="the-hta-verification-framework">The HTA Verification Framework<a class="anchor" aria-label="anchor" href="#the-hta-verification-framework"></a>
+<h2 id="the-hta-verification-test-registry-t01--t12">The HTA Verification Test Registry (T01 – T12)<a class="anchor" aria-label="anchor" href="#the-hta-verification-test-registry-t01--t12"></a>
 </h2>
-<p>The validation checks in <code>testhta</code> are based on formal software verification methodologies described by Tappenden et al. (2014) and Elbasha &amp; Dasbach (2017). The framework checks “black-box” model behavior under extreme inputs to identify structural bugs across 16 core test scenarios (T01–T16), covering:</p>
+<p>The verification checks in <code>testhta</code> operationalize established HTA quality-assurance frameworks (McCabe &amp; Dixon, 2000; Tappenden &amp; Chilcott, 2014; Dasbach &amp; Elbasha, 2017; CHEERS) across <strong>12 core test scenarios (<code>T01</code>–<code>T12</code>)</strong> grouped into four domains:</p>
 <ul>
 <li>
-<strong>QALY Bounding Tests</strong> (T01, T02, T06, T07, T08)</li>
+<strong>Population Tests (<code>T01</code>–<code>T03</code>)</strong>: Equal treatment effects yield equal LYGs and QALYs (<code>T01</code>); zero mortality yields life expectancy equal to the time horizon (<code>T02</code>); immediate 100% mortality yields life expectancy of 1 cycle (<code>T03</code>).</li>
 <li>
-<strong>Cost Bounding &amp; Sensitivity Tests</strong> (T06, T09, T10, T11, T12)</li>
+<strong>QALY Tests (<code>T04</code>–<code>T07</code>)</strong>: Zero discount rate with living utilities <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">= 1</annotation></semantics></math> yields total QALYs equal to LE (<code>T04</code>); living utilities <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">= 1</annotation></semantics></math> yields QALY gains equal to LYGs (<code>T05</code>); positive discount rate reduces QALYs (<code>T06</code>); infinite/extreme discount rate reduces QALY gains after time 0 to zero (<code>T07</code>).</li>
 <li>
-<strong>Population &amp; Life Expectancy Bounding Tests</strong> (T04, T05)</li>
+<strong>Cost Tests (<code>T08</code>–<code>T11</code>)</strong>: Zero intervention cost reduces ICER (<code>T08</code>); increased intervention cost increases ICER (<code>T09</code>); zero vs. positive cost discounting (<code>T10</code>); infinite/extreme cost discount rate reduces costs after time 0 to zero (<code>T11</code>).</li>
 <li>
-<strong>Treatment Arm Comparison &amp; Symmetry Tests</strong> (T14, T15, T16)</li>
-<li>
-<strong>Probabilistic Sensitivity Analysis (PSA) Sampling Tests</strong> (T13)</li>
+<strong>Input / PSA Tests (<code>T12</code>)</strong>: Stochastic parameter samples drawn for Probabilistic Sensitivity Analysis (PSA) respect distribution domain boundaries (e.g., Beta utility draws strictly in <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(0, 1)</annotation></semantics></math> using <code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::with_seed()</a></code>).</li>
 </ul>
-<p>For the complete test matrix, detailed descriptions, and code examples, see the dedicated <a href="https://validate-hta.github.io/testhta/articles/verification-framework.html"><strong>HTA Verification Framework Vignette</strong></a> (<code>vignettes/verification-framework.Rmd</code>).</p>
+<p>For the complete test matrix, step-by-step code examples, custom expectations, and AI-assisted testing workflows (<code>model-context.md</code>), see the package vignettes: - <a href="https://validate-hta.github.io/testhta/articles/introduction.html"><strong>Introduction to testhta &amp; Case Study Model</strong></a> - <a href="https://validate-hta.github.io/testhta/articles/verification-framework.html"><strong>The HTA Verification Framework (T01–T12)</strong></a> - <a href="https://validate-hta.github.io/testhta/articles/basic-tests.html"><strong>R Test Code Examples (Discounting, Costs, Population)</strong></a> - <a href="https://validate-hta.github.io/testhta/articles/validation-guide.html"><strong>Custom Expectations &amp; Stochastic PSA Testing</strong></a> - <a href="https://validate-hta.github.io/testhta/articles/automating-hta-unit-tests.html"><strong>Automating Tests &amp; AI-Assisted Verification</strong></a></p>
 <hr>
 </div>
 <div class="section level2">
@@ -177,10 +179,15 @@
 </h2>
 <ol style="list-style-type: decimal">
 <li>
+<strong>Green, N., Gallardo, D., &amp; Lamrock, F.</strong> (2026). Automated Verification for Health Economic Models in R: A Hands-On Tutorial. (See <code>inst/tutorial-paper/Validation_Testing_HE_Models_Tutorial.pdf</code>).</li>
+<li>
+<strong>McCabe, C., &amp; Dixon, S.</strong> (2000). Testing the Validity of Cost-Effectiveness Models. <em>PharmacoEconomics</em>, 17(5), 501–513. <a href="https://doi.org/10.2165/00019053-200017050-00007" class="external-link">https://doi.org/10.2165/00019053-200017050-00007</a>
+</li>
+<li>
 <strong>Tappenden, P., &amp; Chilcott, J. B.</strong> (2014). Avoiding and Identifying Errors and Other Threats to the Credibility of Health Economic Models. <em>PharmacoEconomics</em>, 32, 967–979. <a href="https://doi.org/10.1007/s40273-014-0186-2" class="external-link">https://doi.org/10.1007/s40273-014-0186-2</a>
 </li>
 <li>
-<strong>Elbasha, E. H., &amp; Dasbach, E. J.</strong> (2017). Verification of Decision-Analytic Models for Health Economic Evaluations: An Overview. <em>PharmacoEconomics</em>, 35, 673–683. <a href="https://doi.org/10.1007/s40273-017-0508-2" class="external-link">https://doi.org/10.1007/s40273-017-0508-2</a>
+<strong>Dasbach, E. J., &amp; Elbasha, E. H.</strong> (2017). Verification of Decision-Analytic Models for Health Economic Evaluations: An Overview. <em>PharmacoEconomics</em>, 35, 673–683. <a href="https://doi.org/10.1007/s40273-017-0508-2" class="external-link">https://doi.org/10.1007/s40273-017-0508-2</a>
 </li>
 <li>
 <strong>Alarid-Escudero, F., et al.</strong> (2019). A Need for Change! A Coding Framework for Improving Transparency in Decision Modeling. <em>PharmacoEconomics</em>, 37(11), 1329–1339. <a href="https://doi.org/10.1007/s40273-019-00837-x" class="external-link">https://doi.org/10.1007/s40273-019-00837-x</a>
@@ -236,7 +243,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

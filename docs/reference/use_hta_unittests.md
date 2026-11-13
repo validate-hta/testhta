@@ -1,9 +1,9 @@
 # Generate Skeleton Unit Tests for HTA Models
 
 Creates a `testthat` directory structure (if needed) and generates a
-unit test script aligned with the HTA Verification Registry (T01 - T16).
-Automatically substitutes the baseline dataset reference (`test_data`)
-with your specified model data object name.
+unit test script aligned with the HTA Verification Registry (`T01` -
+`T12`). Automatically substitutes the baseline dataset reference
+(`base_params`) with your specified model data object name.
 
 ## Usage
 
@@ -11,7 +11,7 @@ with your specified model data object name.
 use_hta_unittests(
   path = ".",
   filename = "test-hta_model.R",
-  data_name = "test_data",
+  data_name = "base_params",
   overwrite = FALSE
 )
 ```
@@ -32,7 +32,7 @@ use_hta_unittests(
 - data_name:
 
   A character string specifying the variable name of your model's data
-  object. Defaults to `"test_data"`.
+  object. Defaults to `"base_params"`.
 
 - overwrite:
 
@@ -48,10 +48,10 @@ returned invisibly.
 
 ``` r
 if (FALSE) { # \dontrun{
-# Generate default tests using 'test_data'
+# Generate default tests using 'base_params'
 use_hta_unittests()
 
-# Substitute 'test_data' with your custom model object name
+# Substitute 'base_params' with your custom model object name
 use_hta_unittests(data_name = "my_oncology_model")
 } # }
 ```

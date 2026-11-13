@@ -2,13 +2,12 @@
 % Please edit documentation in R/ce_markov.R
 \name{ce_markov}
 \alias{ce_markov}
-\title{run cost-effectiveness model}
+\title{Run cost-effectiveness Markov model}
 \usage{
 ce_markov(
   start_pop,
   p_matrix,
   state_c_matrix,
-  trans_c_matrix,
   state_q_matrix,
   n_cycles = 46,
   init_age = 55,
@@ -19,37 +18,39 @@ ce_markov(
 )
 }
 \arguments{
-\item{start_pop}{A vector of initial population counts for each health state}
+\item{start_pop}{A vector of initial population counts for each health state.}
 
-\item{p_matrix}{A 3D array of transition probabilities for each treatment}
+\item{p_matrix}{A 3D array of transition probabilities for each treatment.}
 
-\item{state_c_matrix}{A matrix of state costs for each treatment}
+\item{state_c_matrix}{A matrix of state costs for each treatment.}
 
-\item{trans_c_matrix}{A matrix of transition costs for each treatment}
+\item{state_q_matrix}{A matrix of state utilities for each treatment.}
 
-\item{state_q_matrix}{A matrix of state utilities for each treatment}
+\item{n_cycles}{The number of cycles to run the model for.}
 
-\item{n_cycles}{The number of cycles to run the model for}
+\item{init_age}{The initial age of the population.}
 
-\item{init_age}{The initial age of the population}
+\item{s_names}{Optional names for the health states.}
 
-\item{s_names}{Optional names for the health states}
+\item{t_names}{Optional names for the treatments.}
 
-\item{t_names}{Optional names for the treatments}
+\item{discount_rate}{The discount rate to apply to costs and QALYs.}
 
-\item{discount_rate}{The discount rate to apply to costs and QALYs}
-
-\item{...}{Additional arguments passed to p_matrix_cycle.}
+\item{...}{Additional arguments passed to \code{p_matrix_cycle()}.}
 }
 \value{
-A list containing the population array, total life expectancy, total life-years,
-cycle costs, cycle QALYs, total costs, and total QALYs for each treatment
+A list containing the population array, total and per-person life
+expectancy (\code{total_LE}, \code{total_LE_pp}), total and per-person life-years
+(\code{total_LYs}, \code{total_LYs_pp}), cycle costs, cycle QALYs, and total and
+per-person costs (\code{total_costs}, \code{total_costs_pp}) and QALYs
+(\code{total_QALYs}, \code{total_QALYs_pp}) for each treatment.
 }
 \description{
-Runs a Markov model to calculate costs, QALYs, and life expectancy for different treatments
+Runs a discrete-time cohort Markov model to calculate costs,
+QALYs, and life expectancy for different treatments.
 }
 \examples{
-data(test_data)
-res <- do.call(ce_markov, test_data)
+data(base_params)
+res <- do.call(ce_markov, base_params)
 res$total_costs
 }

@@ -16,6 +16,6 @@ A character vector of treatment arm names.
 Getter for treatment arm names
 }
 \examples{
-data(test_data)
-get_arm_names(test_data)
+data(base_params)
+get_arm_names(base_params)
 }

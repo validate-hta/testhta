@@ -21,16 +21,15 @@ get_transition_matrix(input, arm = NULL)
 ## Value
 
 A matrix of transition probabilities for the specified arm, or the 3D
-array if arm is NULL.
+array if `arm` is `NULL`.
 
 ## Examples
 
 ``` r
-data(test_data)
-get_transition_matrix(test_data, "without_drug")
-#>                       to
-#> from                   Asymptomatic_disease Progressive_disease   Dead
-#>   Asymptomatic_disease               0.9521              0.0100 0.0379
-#>   Progressive_disease                0.0000              0.8121 0.1879
-#>   Dead                               0.0000              0.0000 1.0000
+data(base_params)
+get_transition_matrix(base_params, "without_drug")
+#>              Asymptomatic Progressive Dead
+#> Asymptomatic         0.75         0.2 0.05
+#> Progressive          0.00         0.9 0.10
+#> Dead                 0.00         0.0 1.00
 ```

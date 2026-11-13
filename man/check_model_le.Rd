@@ -4,9 +4,11 @@
 \alias{check_model_le}
 \title{Run model and check Life Expectancy against an expected value}
 \usage{
-check_model_le(expected_le, ..., label = NULL)
+check_model_le(data, expected_le, ..., label = NULL)
 }
 \arguments{
+\item{data}{Baseline input data list.}
+
 \item{expected_le}{The exact expected LE value.}
 
 \item{...}{Arguments passed to \code{run_model()}.}
@@ -14,12 +16,19 @@ check_model_le(expected_le, ..., label = NULL)
 \item{label}{A label for the test, passed to \code{expect_equal()}.}
 }
 \value{
-None, called for side effects (testthat assertion).
+None, called for side effects (\code{testthat} assertion).
 }
 \description{
 Run model and check Life Expectancy against an expected value
 }
 \examples{
-data(test_data)
-check_model_le(1, data = test_data, p_healthy_death = 1, p_sick_death = 1)
+data(base_params)
+dead_p_matrix <- base_params$p_matrix
+dead_p_matrix[] <- 0
+dead_p_matrix[, "Dead", ] <- 1
+check_model_le(
+  data = base_params,
+  expected_le = 1000,
+  p_matrix = dead_p_matrix
+)
 }

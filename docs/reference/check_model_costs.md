@@ -5,10 +5,14 @@ Run model and check Costs against an expected value
 ## Usage
 
 ``` r
-check_model_costs(expected_costs, ..., label = NULL)
+check_model_costs(data, expected_costs, ..., tolerance = NULL, label = NULL)
 ```
 
 ## Arguments
+
+- data:
+
+  Baseline input data list.
 
 - expected_costs:
 
@@ -19,6 +23,10 @@ check_model_costs(expected_costs, ..., label = NULL)
   Arguments passed to
   [`run_model()`](https://validate-hta.github.io/testhta/reference/run_model.md).
 
+- tolerance:
+
+  Approximate equality tolerance.
+
 - label:
 
   A label for the test, passed to
@@ -26,11 +34,17 @@ check_model_costs(expected_costs, ..., label = NULL)
 
 ## Value
 
-None, called for side effects (testthat assertion).
+None, called for side effects (`testthat` assertion).
 
 ## Examples
 
 ``` r
-data(test_data)
-check_model_costs(0, data = test_data, c_healthy = 0, c_sick = 0, c_intervention = 0, c_death = 0)
+data(base_params)
+res_cycle_zero <- run_model(base_params, n_cycles = 1)
+check_model_costs(
+  data = base_params,
+  expected_costs = get_costs(res_cycle_zero),
+  discount_rate = 1000,
+  tolerance = 0.01
+)
 ```

@@ -21,6 +21,9 @@ model boundaries.
   : Run model and check Costs against an expected value
 - [`check_model_le()`](https://validate-hta.github.io/testhta/reference/check_model_le.md)
   : Run model and check Life Expectancy against an expected value
+- [`check_model_le_pp()`](https://validate-hta.github.io/testhta/reference/check_model_le_pp.md)
+  : Run model and check per-person Life Expectancy against an expected
+  value
 - [`compare_model_runs()`](https://validate-hta.github.io/testhta/reference/compare_model_runs.md)
   : Compare model outputs from two different parameter sets
 
@@ -47,10 +50,16 @@ treatment arm, and extract outcomes during test execution.
   : Getter for transition probability matrix
 - [`get_qalys()`](https://validate-hta.github.io/testhta/reference/get_qalys.md)
   : Getter for QALYs
+- [`get_qalys_pp()`](https://validate-hta.github.io/testhta/reference/get_qalys_pp.md)
+  : Getter for per-person QALYs
 - [`get_costs()`](https://validate-hta.github.io/testhta/reference/get_costs.md)
   : Getter for costs
+- [`get_costs_pp()`](https://validate-hta.github.io/testhta/reference/get_costs_pp.md)
+  : Getter for per-person costs
 - [`get_le()`](https://validate-hta.github.io/testhta/reference/get_le.md)
   : Getter for life expectancy (LE)
+- [`get_le_pp()`](https://validate-hta.github.io/testhta/reference/get_le_pp.md)
+  : Getter for per-person life expectancy (LE)
 - [`get_icer()`](https://validate-hta.github.io/testhta/reference/get_icer.md)
   : Getter for ICER
 - [`get_incremental_costs()`](https://validate-hta.github.io/testhta/reference/get_incremental_costs.md)
@@ -62,12 +71,15 @@ treatment arm, and extract outcomes during test execution.
 
 ## Example Case Study Model
 
-The cohort Markov model engine used as the demonstration environment for
-these testing tools.
+The cohort Markov model engine and baseline dataset used as the
+demonstration environment in the tutorial paper.
 
 - [`ce_markov()`](https://validate-hta.github.io/testhta/reference/ce_markov.md)
-  : run cost-effectiveness model
+  : Run cost-effectiveness Markov model
 - [`p_matrix_cycle()`](https://validate-hta.github.io/testhta/reference/p_matrix_cycle.md)
   : Time-dependent probability matrix
-- [`test_data`](https://validate-hta.github.io/testhta/reference/test_data.md)
-  : Standard baseline parameters for cost-effectiveness testing
+- [`sample_psa_parameters()`](https://validate-hta.github.io/testhta/reference/sample_psa_parameters.md)
+  : Sample probabilistic sensitivity analysis (PSA) parameters
+- [`base_params`](https://validate-hta.github.io/testhta/reference/base_params.md)
+  [`test_data`](https://validate-hta.github.io/testhta/reference/base_params.md)
+  : Baseline parameters for the cohort Markov model case study

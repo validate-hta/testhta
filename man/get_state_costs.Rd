@@ -12,12 +12,13 @@ get_state_costs(input, arm = NULL)
 \item{arm}{Optional treatment arm name (character) or index.}
 }
 \value{
-A vector of state costs for the specified arm, or the full cost matrix if arm is NULL.
+A vector of state costs for the specified arm, or the full cost
+matrix if \code{arm} is \code{NULL}.
 }
 \description{
 Getter for state costs
 }
 \examples{
-data(test_data)
-get_state_costs(test_data, "without_drug")
+data(base_params)
+get_state_costs(base_params, "without_drug")
 }

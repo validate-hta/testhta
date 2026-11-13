@@ -14,9 +14,10 @@ compare_model_runs(
 )
 }
 \arguments{
-\item{extractor_fn}{The function to get the result (e.g., get_qalys).}
+\item{extractor_fn}{The function to get the result (e.g., \code{get_qalys}).}
 
-\item{comparison_fn}{The testthat expectation function (e.g., expect_lt).}
+\item{comparison_fn}{The \code{testthat} expectation function (e.g.,
+\code{expect_lt}).}
 
 \item{params_1}{List of parameters for the first \code{run_model()} call.}
 
@@ -27,19 +28,19 @@ compare_model_runs(
 \item{label}{A label for the test, passed to the comparison function.}
 }
 \value{
-None, called for side effects (testthat assertion).
+None, called for side effects (\code{testthat} assertion).
 }
 \description{
 Compare model outputs from two different parameter sets
 }
 \examples{
 library(testthat)
-data(test_data)
+data(base_params)
 compare_model_runs(
   extractor_fn = get_qalys,
   comparison_fn = expect_lt,
   params_1 = list(discount_rate = 0.035),
   params_2 = list(discount_rate = 0),
-  data = test_data
+  data = base_params
 )
 }

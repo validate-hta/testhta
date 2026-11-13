@@ -1,243 +1,218 @@
 # ==============================================================================
-# testhta Unit Tests Skeleton - HTA Verification Registry (T01 - T16)
+# testhta Unit Tests Skeleton - HTA Verification Registry (T01 - T12)
 # ==============================================================================
 # INSTRUCTIONS:
 # Run these tests using testthat::test_file(), devtools::test(), or your IDE.
-# Replace `test_data` below with your model's actual parameter list or data object.
+# Replace `base_params` below with your model's parameter list or data object.
 # ==============================================================================
 
 library(testthat)
 library(testhta)
 
 # Load your baseline model data here
-# data(your_model_data) 
-data(test_data) # Placeholder: replace with your model data
+# data(your_model_data)
+data(base_params) # Placeholder: replace with your model data
 
-# --- QALY Validation Tests ---
+# --- Population Verification Tests (T01 - T03) ---
 
-test_that("T01: QALYs with discount_rate = 1 should be 0", {
-  check_model_qalys(
-    data = test_data, 
-    discount_rate = 1, 
-    expected_qalys = 0,
-    label = "T01: QALYs with discount_rate = 1 should be 0"
-  )
-})
+test_that("Population calculations using life expectancy (LE)", {
+  t_names <- get_arm_names(base_params)
 
-test_that("T02: Undiscounted QALYs (with u=1) should equal LE", {
-  test_run_t02 <- run_model(test_data, discount_rate = 0, u_healthy = 1, u_sick = 1)
+  # T01: Treatment effect the same for all treatments (including no treatment)
+  no_effect_p_matrix <- base_params$p_matrix
+  no_effect_p_matrix[, , "with_drug"] <-
+    no_effect_p_matrix[, , "without_drug"]
+  res_no_effect <- run_model(base_params, p_matrix = no_effect_p_matrix)
+
   expect_equal(
-    get_qalys(test_run_t02), 
-    get_le(test_run_t02), 
-    tolerance = 0.01,
-    label = "T02: Undiscounted QALYs (with u=1) should equal LE"
+    unname(get_qalys(res_no_effect)["with_drug"]),
+    unname(get_qalys(res_no_effect)["without_drug"]),
+    label = "T01: QALYs must be equal when relative treatment effect is 1"
   )
-})
 
-test_that("T06: Set all living health state utility parameters = 1 yields QALYs equal to LYGs", {
-  test_run_t06 <- run_model(test_data, u_healthy = 1, u_sick = 1)
   expect_equal(
-    get_qalys(test_run_t06), 
-    test_run_t06$total_LYs, 
-    tolerance = 0.01,
-    label = "T06: QALY gains exactly equal LYGs when utilities = 1"
+    unname(get_le(res_no_effect)["with_drug"]),
+    unname(get_le(res_no_effect)["without_drug"]),
+    label = "T01: LEs must be equal when relative treatment effect is 1"
+  )
+
+  # T02: If all transition probabilities to death are 0, LE is n_cycles
+  n_cycles_test <- 50
+  no_death_p_matrix <- base_params$p_matrix
+  no_death_p_matrix[, "Dead", ] <- 0
+
+  # Normalise all rows simultaneously
+  no_death_p_matrix <- prop.table(no_death_p_matrix, margin = c(1, 3))
+
+  no_death_p_matrix["Dead", , ] <- 0
+  no_death_p_matrix["Dead", "Dead", ] <- 1
+
+  no_death_p_matrix <- array(
+    no_death_p_matrix,
+    dim = dim(base_params$p_matrix),
+    dimnames = dimnames(base_params$p_matrix)
+  )
+
+  check_model_le_pp(
+    data = base_params,
+    p_matrix = no_death_p_matrix,
+    n_cycles = n_cycles_test,
+    expected_le = setNames(c(n_cycles_test, n_cycles_test), t_names),
+    label = "T02: LE should be n_cycles when all p_death=0"
+  )
+
+  # T03: If all transition probabilities to death are 1, LE is 1 cycle
+  # (LE expectation depends on within-cycle correction implementation)
+  dead_p_matrix <- base_params$p_matrix
+  dead_p_matrix[] <- 0
+  dead_p_matrix[, "Dead", ] <- 1
+
+  check_model_le_pp(
+    data = base_params,
+    p_matrix = dead_p_matrix,
+    expected_le = setNames(c(1, 1), t_names),
+    label = "T03: LE should be 1 when all p_death=1"
   )
 })
 
-test_that("T07: Discounted QALYs should be less than Undiscounted QALYs", {
+# --- QALY Verification Tests (T04 - T07) ---
+
+test_that("QALY calculations", {
+  # T04: Undiscounted QALYs (with u=1) should equal LE
+  u_one_matrix <- base_params$state_q_matrix
+  u_one_matrix[, c("Asymptomatic", "Progressive")] <- 1
+
+  test_run_t04 <- run_model(
+    base_params,
+    discount_rate = 0,
+    state_q_matrix = u_one_matrix
+  )
+  expect_equal(
+    get_qalys(test_run_t04),
+    get_le(test_run_t04),
+    label = "T04: Undiscounted QALYs (with u=1) should equal LE"
+  )
+
+  # T05: QALY gains exactly equal LYGs when all utilities are 1
+  test_run_t05 <- run_model(
+    base_params,
+    discount_rate = 0,
+    state_q_matrix = u_one_matrix
+  )
+  expect_equal(
+    get_qalys(test_run_t05)["with_drug"] -
+      get_qalys(test_run_t05)["without_drug"],
+    get_le(test_run_t05)["with_drug"] -
+      get_le(test_run_t05)["without_drug"],
+    label = "T05: QALYs exactly equals LYGs when all utilities are 1"
+  )
+
+  # T06: QALYs with standard discount < undiscounted QALYs
   compare_model_runs(
     extractor_fn = get_qalys,
     comparison_fn = expect_lt,
     params_1 = list(discount_rate = 0.035),
     params_2 = list(discount_rate = 0),
-    data = test_data,
-    label = "T07: Discounted QALYs should be less than Undiscounted QALYs"
+    data = base_params,
+    label = "T06: Discounted should be less than undiscounted QALYs"
   )
-})
 
-test_that("T08: QALY gains after time 0 tend towards zero at high discount rates", {
+  # T07: QALY gains after time 0 equal zero
+  res_cycle_zero <- run_model(base_params, n_cycles = 1)
+
   check_model_qalys(
-    data = test_data, 
-    discount_rate = 1000, 
-    expected_qalys = 0,
-    label = "T08: QALYs with extreme discount_rate = 1000 should be 0"
-  )
-})
-
-# --- Population Validation Tests ---
-
-test_that("T03: Set relative treatment effects = 1 yields equal LYGs & QALYs", {
-  test_run_t03 <- run_model(test_data, effect = 0)
-  expect_equal(
-    as.numeric(test_run_t03$total_LYs["with_drug"]), 
-    as.numeric(test_run_t03$total_LYs["without_drug"]), 
+    data = base_params,
+    discount_rate = 1000,
+    expected_qalys = get_qalys(res_cycle_zero),
     tolerance = 0.01,
-    label = "T03: Equal LYGs for relative effect = 0"
-  )
-  expect_equal(
-    as.numeric(test_run_t03$total_QALYs["with_drug"]), 
-    as.numeric(test_run_t03$total_QALYs["without_drug"]), 
-    tolerance = 0.01,
-    label = "T03: Equal QALYs for relative effect = 0"
+    label = "T07: High discount total QALYs equal cycle 0 QALYs"
   )
 })
 
-test_that("T04: LE should be n_cycles when all p_death = 0", {
-  n_cycles_test <- 50
-  check_model_le(
-    data = test_data,
-    p_healthy_death = 0,
-    p_sick_death = 0,
-    n_cycles = n_cycles_test,
-    expected_le = n_cycles_test,
-    label = "T04: LE should be n_cycles when all p_death = 0"
+# --- Cost Verification Tests (T08 - T11) ---
+
+test_that("Cost calculations", {
+  # Calculate baseline incremental QALYs
+  base_res <- run_model(base_params)
+  base_qalys <- get_qalys(base_res)
+  inc_qalys <- unname(
+    base_qalys["with_drug"] - base_qalys["without_drug"]
   )
-})
 
-test_that("T05: LE should be 1 when all p_death = 1", {
-  check_model_le(
-    data = test_data,
-    p_healthy_death = 1,
-    p_sick_death = 1,
-    expected_le = 1,
-    label = "T05: LE should be 1 when all p_death = 1"
+  # skip the rest of this block if assumption fails
+  testthat::skip_if_not(
+    inc_qalys > 0,
+    "Baseline incremental QALYs are <= 0. Skipping ICER directionality tests."
   )
-})
 
-# --- Cost Validation Tests ---
+  # T08: Set intervention costs = 0. ICER is reduced
+  # (Assuming baseline Incremental Effects are strictly positive)
+  c_mat_zero_int <- base_params$state_c_matrix
+  c_mat_zero_int["with_drug", "Asymptomatic"] <-
+    c_mat_zero_int["without_drug", "Asymptomatic"]
 
-test_that("T09: Set intervention costs = 0 reduces ICER", {
   compare_model_runs(
     extractor_fn = get_icer,
     comparison_fn = expect_lt,
-    params_1 = list(c_intervention = 0),
+    params_1 = list(state_c_matrix = c_mat_zero_int),
     params_2 = list(),
-    data = test_data,
-    label = "T09: Set intervention costs = 0 reduces ICER"
+    data = base_params,
+    label = "T08: Intervention costs = 0 reduces ICER"
   )
-})
 
-test_that("T10: Increase intervention costs increases ICER", {
+  # T09: Increase intervention costs. ICER is increased
+  c_mat_high_int <- base_params$state_c_matrix
+  c_mat_high_int["with_drug", "Asymptomatic"] <-
+    c_mat_high_int["without_drug", "Asymptomatic"] + 10000
+
   compare_model_runs(
     extractor_fn = get_icer,
     comparison_fn = expect_gt,
-    params_1 = list(c_intervention = 5000),
+    params_1 = list(state_c_matrix = c_mat_high_int),
     params_2 = list(),
-    data = test_data,
-    label = "T10: Increase intervention costs increases ICER"
+    data = base_params,
+    label = "T09: Increasing intervention costs increases ICER"
   )
-})
 
-test_that("T11: Cost discount rate = 0 yields discounted costs = undiscounted costs", {
+  # T10: Costs with standard discount < undiscounted costs
   compare_model_runs(
     extractor_fn = get_costs,
-    comparison_fn = expect_equal,
-    params_1 = list(discount_rate = 0),
+    comparison_fn = expect_lt,
+    params_1 = list(discount_rate = 0.035),
     params_2 = list(discount_rate = 0),
-    data = test_data,
-    label = "T11: Cost discount rate = 0 yields discounted costs = undiscounted costs"
+    data = base_params,
+    label = "T10: Discounted less than undiscounted costs"
   )
-})
 
-test_that("T12: Costs with extreme discount_rate = 1000 should be 0", {
+  # T11: Set cost discount rate to infinity. Costs equal zero t > 0
+  res_cycle_zero <- run_model(base_params, n_cycles = 1)
   check_model_costs(
-    data = test_data, 
-    discount_rate = 1000, 
-    expected_costs = 0,
-    label = "T12: Costs with extreme discount_rate = 1000 should be 0"
+    data = base_params,
+    discount_rate = 1000,
+    expected_costs = get_costs(res_cycle_zero),
+    tolerance = 0.01,
+    label = "T11: High discount total costs equal cycle 0 costs"
   )
 })
 
-# --- Probabilistic Sensitivity Analysis (PSA) Validation Tests (T13) ---
+# --- Input / PSA Verification Tests (T12) ---
 
-test_that("T13 (PSA): Sampled parameters lie within valid statistical distribution bounds", {
-  set.seed(123)
-  n_samples <- 100
-  u_samples <- stats::rbeta(n_samples, shape1 = 8, shape2 = 2)
-  expect_true(all(u_samples >= 0 & u_samples <= 1), label = "T13: Beta utility samples in [0,1]")
-  
-  cost_samples <- stats::rlnorm(n_samples, meanlog = 5, sdlog = 0.5)
-  expect_true(all(cost_samples > 0), label = "T13: Lognormal cost samples > 0")
-})
-
-# --- Treatment Arm & Symmetry Validation Tests (T14 - T16) ---
-
-test_that("T14 (Treatment Arm): Equalizing arm parameters yields equal costs and QALYs across arms", {
-  data_eq <- test_data |>
-    set_costs("with_drug", get_state_costs(test_data, "without_drug")) |>
-    set_utilities("with_drug", get_state_utilities(test_data, "without_drug")) |>
-    set_p_matrix("with_drug", get_transition_matrix(test_data, "without_drug"))
-  
-  res_eq <- run_model(data_eq)
-  
-  expect_equal(
-    as.numeric(get_incremental_costs(res_eq)),
-    0,
-    tolerance = 0.01,
-    label = "T14: Incremental costs equal 0 when arms are identical"
-  )
-  expect_equal(
-    as.numeric(get_incremental_qalys(res_eq)),
-    0,
-    tolerance = 0.01,
-    label = "T14: Incremental QALYs equal 0 when arms are identical"
-  )
-})
-
-test_that("T15 (Treatment Arm): Amending individual treatment arm parameter changes ICER", {
-  u_with_drug <- get_state_utilities(test_data, "with_drug")
-  u_with_drug["Progressive_disease"] <- 0.8
-  
-  compare_model_runs(
-    extractor_fn = get_icer,
-    comparison_fn = function(val1, val2, label) {
-      expect_false(isTRUE(all.equal(val1, val2)), label = label)
-    },
-    params_1 = list(state_q_matrix = set_utilities(test_data, "with_drug", u_with_drug)$state_q_matrix),
-    params_2 = list(),
-    data = test_data,
-    label = "T15: Amending individual arm parameter changes ICER"
-  )
-})
-
-test_that("T16 (Treatment Arm): Swapping treatment arm parameters swaps QALYs and costs between arms", {
-  arms <- get_arm_names(test_data)
-  arm1 <- arms[1]
-  arm2 <- arms[2]
-  
-  data_swapped <- test_data |>
-    set_costs(arm1, get_state_costs(test_data, arm2)) |>
-    set_costs(arm2, get_state_costs(test_data, arm1)) |>
-    set_utilities(arm1, get_state_utilities(test_data, arm2)) |>
-    set_utilities(arm2, get_state_utilities(test_data, arm1)) |>
-    set_p_matrix(arm1, get_transition_matrix(test_data, arm2)) |>
-    set_p_matrix(arm2, get_transition_matrix(test_data, arm1))
-  
-  res_base <- run_model(test_data)
-  res_swapped <- run_model(data_swapped)
-  
-  expect_equal(
-    as.numeric(get_costs(res_swapped)[arm1]),
-    as.numeric(get_costs(res_base)[arm2]),
-    tolerance = 0.01,
-    label = "T16: Swapped costs arm 1 equals baseline arm 2"
-  )
-  expect_equal(
-    as.numeric(get_costs(res_swapped)[arm2]),
-    as.numeric(get_costs(res_base)[arm1]),
-    tolerance = 0.01,
-    label = "T16: Swapped costs arm 2 equals baseline arm 1"
-  )
-  expect_equal(
-    as.numeric(get_qalys(res_swapped)[arm1]),
-    as.numeric(get_qalys(res_base)[arm2]),
-    tolerance = 0.01,
-    label = "T16: Swapped QALYs arm 1 equals baseline arm 2"
-  )
-  expect_equal(
-    as.numeric(get_qalys(res_swapped)[arm2]),
-    as.numeric(get_qalys(res_base)[arm1]),
-    tolerance = 0.01,
-    label = "T16: Swapped QALYs arm 2 equals baseline arm 1"
-  )
+test_that("T12: PSA beta samples remain within (0, 1)", {
+  withr::with_seed(42, {
+    psa_samples <- sample_psa_parameters(
+      n_sim = 1000,
+      base_params = base_params
+    )
+    beta_cols <- grep("^utility_", names(psa_samples), value = TRUE)
+    for (col in beta_cols) {
+      expect_true(
+        all(psa_samples[[col]] > 0 & psa_samples[[col]] < 1),
+        label = paste0(
+          "T12: beta-sampled '",
+          col,
+          "' must lie strictly in (0, 1)"
+        )
+      )
+    }
+  })
 })

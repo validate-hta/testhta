@@ -21,13 +21,13 @@ get_state_utilities(input, arm = NULL)
 ## Value
 
 A vector of state utilities for the specified arm, or the full utility
-matrix if arm is NULL.
+matrix if `arm` is `NULL`.
 
 ## Examples
 
 ``` r
-data(test_data)
-get_state_utilities(test_data, "without_drug")
-#> Asymptomatic_disease  Progressive_disease                 Dead 
-#>                 0.95                 0.75                 0.00 
+data(base_params)
+get_state_utilities(base_params, "without_drug")
+#> Asymptomatic  Progressive         Dead 
+#>          0.9          0.6          0.0 
 ```

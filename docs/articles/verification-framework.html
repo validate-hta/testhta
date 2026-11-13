@@ -39,10 +39,10 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-guides">
-<li><a class="dropdown-item" href="../articles/basic-tests.html">Writing Basic Bounding Tests</a></li>
-    <li><a class="dropdown-item" href="../articles/validation-guide.html">HTA Model Bounding &amp; Validation</a></li>
-    <li><a class="dropdown-item" href="../articles/verification-framework.html">The HTA Verification Framework</a></li>
-    <li><a class="dropdown-item" href="../articles/automating-hta-unit-tests.html">Automating HTA Model Validation with Unit Tests</a></li>
+<li><a class="dropdown-item" href="../articles/verification-framework.html">The HTA Verification Framework (T01–T12)</a></li>
+    <li><a class="dropdown-item" href="../articles/basic-tests.html">R Test Code Examples</a></li>
+    <li><a class="dropdown-item" href="../articles/validation-guide.html">Custom Expectations and Advanced Testing</a></li>
+    <li><a class="dropdown-item" href="../articles/automating-hta-unit-tests.html">Automating Tests and AI-Assisted Verification</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -74,253 +74,242 @@
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://validate-hta.github.io/testhta/">testhta</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://testthat.r-lib.org" class="external-link">testthat</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
-<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+<h2 id="hierarchy-of-testing-in-health-economic-modelling">1. Hierarchy of Testing in Health Economic Modelling<a class="anchor" aria-label="anchor" href="#hierarchy-of-testing-in-health-economic-modelling"></a>
 </h2>
-<p>Health Technology Assessment (HTA) models inform critical healthcare
-coverage, pricing, and clinical policy decisions. However, complex
-decision-analytic models are prone to structural bugs, indexing errors,
-and hidden parameter miswirings.</p>
-<p>The <strong>HTA Verification Framework</strong> in
-<code>testhta</code> provides a software-engineering-inspired
-methodology for formal model verification. Based on seminal frameworks
-by <strong>Tappenden &amp; Chilcott (2014)</strong> and <strong>Elbasha
-&amp; Dasbach (2017)</strong>, the framework applies automated
-“black-box” unit tests to verify that model code strictly behaves
-according to expected mathematical and economic boundary conditions.</p>
+<p>Testing can be performed at different levels of abstraction. Adapted
+from the software engineering <em>Test Pyramid</em> framework (Cohn,
+2009), automated checks in health economic modelling are organized into
+three structural tiers:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Level 1: Unit Testing (Lowest Level — Fast, High
+Isolation)</strong><br>
+Isolates the smallest testable parts of an application
+(“units”)—typically a single, self-contained helper function—and
+verifies that they function correctly (e.g., a function that converts a
+rate to a probability, applies a discount factor, or draws a parameter
+sample).</li>
+<li>
+<strong>Level 2: Integration Testing (Middle Level — Subcomponent
+Interaction)</strong><br>
+Verifies that multiple components (input structures, transition
+matrices, simulation loops, and summary extractors) interact correctly
+to produce logically sound results. Because health economic models
+frequently lack a simple “test oracle” for complex multi-state traces,
+executing <code><a href="../reference/run_model.html">run_model()</a></code> under controlled boundary conditions
+to check summary outputs like QALYs, Life Expectancy (LE), and ICERs
+primarily operates at this integration level.</li>
+<li>
+<strong>Level 3: System or End-to-End Testing (Highest Level — Full
+Pipeline)</strong><br>
+Executes the entire decision-analytic pipeline from raw data ingestion
+to final policy outputs (e.g., running a 10,000-iteration Probabilistic
+Sensitivity Analysis (PSA) pipeline to verify that it completes without
+memory leaks, handles missing data gracefully, and outputs a valid ICER
+and CEAC).</li>
+</ol>
 <hr>
 </div>
 <div class="section level2">
-<h2 id="verification-test-registry-t01-t16">Verification Test Registry (T01 – T16)<a class="anchor" aria-label="anchor" href="#verification-test-registry-t01-t16"></a>
+<h2 id="why-use-testthat-instead-of-ad-hoc-console-checks">2. Why Use <code>testthat</code> Instead of Ad-Hoc Console
+Checks?<a class="anchor" aria-label="anchor" href="#why-use-testthat-instead-of-ad-hoc-console-checks"></a>
 </h2>
-<p>The framework organizes 16 automated verification test cases into
-five distinct logical categories:</p>
-<div class="section level3">
-<h3 id="qaly-bounding-tests">1. QALY Bounding Tests<a class="anchor" aria-label="anchor" href="#qaly-bounding-tests"></a>
-</h3>
-<p>These tests assert quality-adjusted life year (QALY) calculations
-under extreme discount rates and boundary utility weights: - <strong>T01
-(Extreme Discounting 100%)</strong>: Setting
-<code>discount_rate = 1</code> zeroes out future cycles, yielding total
-QALYs = 0. - <strong>T02 (Upper Bound QALYs)</strong>: Setting state
-utilities = 1 with zero discounting (<code>discount_rate = 0</code>)
-forces QALYs to equal total undiscounted Life Expectancy (LE). -
-<strong>T06 (Utility-1 Scaling)</strong>: Setting state utilities = 1
-yields QALY gains equal to Life-Years (LYGs). - <strong>T07 (Discount
-Directionality)</strong>: Standard discounting (e.g. 3.5%) strictly
-reduces QALYs compared to undiscounted runs. - <strong>T08 (Infinite
-Discounting)</strong>: Infinite discount rates
-(<code>discount_rate = 1000</code>) drive future QALY gains to zero.</p>
-</div>
-<div class="section level3">
-<h3 id="cost-bounding-sensitivity-tests">2. Cost Bounding &amp; Sensitivity Tests<a class="anchor" aria-label="anchor" href="#cost-bounding-sensitivity-tests"></a>
-</h3>
-<p>These tests check cost accumulation logic and parameter sensitivity:
-- <strong>T06 (Zero Cost Bounding)</strong>: Setting all health state
-occupancy, transition, and intervention costs to 0 must output total
-costs of 0. - <strong>T09 (Zero Intervention Cost)</strong>: Removing
-intervention costs strictly reduces the Incremental Cost-Effectiveness
-Ratio (ICER). - <strong>T10 (Increased Intervention Cost)</strong>:
-Increasing intervention cost strictly increases the ICER. - <strong>T11
-(Zero Cost Discounting)</strong>: A zero cost discount rate ensures
-discounted costs equal undiscounted costs. - <strong>T12 (Infinite Cost
-Discounting)</strong>: An infinite cost discount rate reduces future
-costs to zero.</p>
-</div>
-<div class="section level3">
-<h3 id="population-life-expectancy-bounding-tests">3. Population &amp; Life Expectancy Bounding Tests<a class="anchor" aria-label="anchor" href="#population-life-expectancy-bounding-tests"></a>
-</h3>
-<p>These tests verify cohort flow across state transitions: -
-<strong>T05 (Absolute Mortality)</strong>: Setting death transition
-probability = 1 forces the cohort to die immediately, yielding Life
-Expectancy = 1 cycle. - <strong>T04 (Zero Mortality)</strong>: Setting
-death transition probability = 0 ensures full cohort survival, yielding
-Life Expectancy equal to the full time horizon
-(<code>n_cycles</code>).</p>
-</div>
-<div class="section level3">
-<h3 id="treatment-arm-comparison-symmetry-tests">4. Treatment Arm Comparison &amp; Symmetry Tests<a class="anchor" aria-label="anchor" href="#treatment-arm-comparison-symmetry-tests"></a>
-</h3>
-<p>These tests verify parameter wiring and symmetry across model arms: -
-<strong>T14 (Arm Parameter Equivalence)</strong>: Setting all
-treatment-specific parameters equal across arms
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>θ</mi><mi>a</mi></msub><mo>=</mo><msub><mi>θ</mi><mi>b</mi></msub></mrow><annotation encoding="application/x-tex">\theta_a = \theta_b</annotation></semantics></math>)
-yields identical costs and QALYs (zero incremental outcomes). -
-<strong>T15 (Parameter Sensitivity Sweep)</strong>: Modifying an
-individual parameter for a treatment arm
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>θ</mi><mi>a</mi></msub><mo>≠</mo><msub><mi>θ</mi><mi>b</mi></msub></mrow><annotation encoding="application/x-tex">\theta_a \neq \theta_b</annotation></semantics></math>)
-must alter the ICER, confirming parameter wiring. - <strong>T16 (Arm
-Parameter Swapping)</strong>: Swapping parameter vectors between arms
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>θ</mi><mi>a</mi></msub><mo>↔</mo><msub><mi>θ</mi><mi>b</mi></msub></mrow><annotation encoding="application/x-tex">\theta_a \leftrightarrow \theta_b</annotation></semantics></math>)
-swaps output costs and QALYs between those arms.</p>
-</div>
-<div class="section level3">
-<h3 id="probabilistic-sensitivity-analysis-psa-sampling-tests">5. Probabilistic Sensitivity Analysis (PSA) Sampling Tests<a class="anchor" aria-label="anchor" href="#probabilistic-sensitivity-analysis-psa-sampling-tests"></a>
-</h3>
-<p>These tests check parameter distribution limits before running Monte
-Carlo simulations: - <strong>T13 (Distribution Bounding)</strong>:
-Verifies that PSA parameter draws strictly lie within theoretical domain
-limits (e.g., Beta utilities/probabilities
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∈</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">\in [0, 1]</annotation></semantics></math>,
-Lognormal costs
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">&gt; 0</annotation></semantics></math>).</p>
+<p>The <code>testthat</code> package (Wickham, 2011) is the standard
+framework for automated testing in R. To set up an R package or project
+to use <code>testthat</code> (edition 3), run:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">usethis</span><span class="fu">::</span><span class="fu"><a href="https://usethis.r-lib.org/reference/use_testthat.html" class="external-link">use_testthat</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<p>This creates the <code>tests/testthat/</code> directory and
+<code>tests/testthat.R</code> runner script. Automated checks in
+<code>testthat</code> are written as <strong>expectations</strong>
+(functions starting with <code>expect_</code>, such as
+<code><a href="https://testthat.r-lib.org/reference/equality-expectations.html" class="external-link">expect_equal()</a></code>, <code><a href="https://testthat.r-lib.org/reference/comparison-expectations.html" class="external-link">expect_lt()</a></code>,
+<code><a href="https://testthat.r-lib.org/reference/comparison-expectations.html" class="external-link">expect_gt()</a></code>, <code><a href="https://testthat.r-lib.org/reference/logical-expectations.html" class="external-link">expect_true()</a></code>) grouped inside
+<code>test_that("&lt;description&gt;", { ... })</code> blocks.</p>
+<p>Unlike ad-hoc console checks using raw operators (<code>== 0</code>
+or <code>&lt;</code>), which return a generic <code>FALSE</code> or fail
+silently unless manually inspected each time a script is run,
+<code>testthat</code> expectations act as automated diagnostic tools.
+When an expectation fails, <code>testthat</code> immediately flags the
+exact test requirement ID, file, line number, and numerical discrepancy
+between actual and expected values.</p>
 <hr>
 </div>
-</div>
 <div class="section level2">
-<h2 id="verification-test-summary-matrix">Verification Test Summary Matrix<a class="anchor" aria-label="anchor" href="#verification-test-summary-matrix"></a>
+<h2 id="health-economic-modelling-test-suite-t01-t12">3. Health Economic Modelling Test Suite (<code>T01</code> –
+<code>T12</code>)<a class="anchor" aria-label="anchor" href="#health-economic-modelling-test-suite-t01-t12"></a>
 </h2>
+<p>Table 1 below presents the standardized suite of 12 verification
+tests, extreme-value checks, and logical assertions adapted from
+established HTA quality-assurance frameworks:</p>
+<ul>
+<li>Internal consistency and extreme-value checks (McCabe &amp; Dixon,
+2000)</li>
+<li>Comprehensive “black-box” verification criteria (Tappenden &amp;
+Chilcott, 2014)</li>
+<li>Automated decision-analytic checking principles (Dasbach &amp;
+Elbasha, 2017)</li>
+<li>Technical verification standards reinforced by the CHEERS statement
+(Husereau et al., 2013)</li>
+</ul>
 <table class="table">
 <colgroup>
-<col width="20%">
-<col width="20%">
-<col width="20%">
-<col width="20%">
-<col width="20%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
 </colgroup>
 <thead><tr class="header">
+<th align="left">ID</th>
 <th align="left">Group</th>
-<th align="left">Test Case ID</th>
-<th align="left">Boundary / Verification Condition</th>
-<th align="left">Expected Behavior</th>
-<th align="left">Verification Helper / Code</th>
+<th align="left">Test Condition</th>
+<th align="left">Expected Result</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td align="left"><strong>QALY Bounding</strong></td>
 <td align="left"><strong>T01</strong></td>
-<td align="left">Set discount rate to <code>100%</code>
-(<code>discount_rate = 1</code>)</td>
-<td align="left">QALYs must equal <code>0</code>
+<td align="left">Population</td>
+<td align="left">Treatment effect the same for all treatments, e.g., Set
+relative treatment effects (OR, HR, RR)
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">= 1</annotation></semantics></math>
 </td>
-<td align="left"><code>check_model_qalys(0, ...)</code></td>
+<td align="left">All treatments produce equal estimates of total LYGs
+and total QALYs</td>
 </tr>
 <tr class="even">
-<td align="left"><strong>QALY Bounding</strong></td>
 <td align="left"><strong>T02</strong></td>
-<td align="left">Set utilities to <code>1</code>, discount to
-<code>0</code>
+<td align="left">Population</td>
+<td align="left">Set mortality rates (or corresponding transition
+probabilities)
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">= 0</annotation></semantics></math>
 </td>
-<td align="left">QALYs must equal Life Expectancy</td>
-<td align="left"><code>expect_equal(get_qalys(r), get_le(r))</code></td>
+<td align="left">
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">LE</mtext><mo>=</mo><mtext mathvariant="normal">time horizon</mtext></mrow><annotation encoding="application/x-tex">\text{LE} = \text{time horizon}</annotation></semantics></math>
+(assuming a fixed, finite time horizon to avoid an infinite loop)</td>
 </tr>
 <tr class="odd">
-<td align="left"><strong>QALY Bounding</strong></td>
-<td align="left"><strong>T06</strong></td>
-<td align="left">Set utilities for living states to <code>1</code>
+<td align="left"><strong>T03</strong></td>
+<td align="left">Population</td>
+<td align="left">Set mortality rates (or corresponding transition
+probabilities) to produce a probability of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
 </td>
-<td align="left">QALY gains equal Life-Years (LYGs)</td>
-<td align="left"><code>expect_equal(get_qalys(r), r$total_LYs)</code></td>
+<td align="left">
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">LE</mtext><mo>=</mo><mn>1</mn><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> cycle</mtext></mrow></mrow><annotation encoding="application/x-tex">\text{LE} = 1\text{ cycle}</annotation></semantics></math>
+(or
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0.5</mn><annotation encoding="application/x-tex">0.5</annotation></semantics></math>
+depending on within-cycle correction implementation)</td>
 </tr>
 <tr class="even">
-<td align="left"><strong>QALY Bounding</strong></td>
-<td align="left"><strong>T07</strong></td>
-<td align="left">Standard discounting vs. undiscounted</td>
-<td align="left">Discounted QALYs strictly less than undiscounted</td>
-<td align="left"><code>compare_model_runs(..., expect_lt)</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><strong>QALY Bounding</strong></td>
-<td align="left"><strong>T08</strong></td>
-<td align="left">Infinite discount rate
-(<code>discount_rate = 1000</code>)</td>
-<td align="left">QALYs tend to zero</td>
-<td align="left"><code>check_model_qalys(0, ...)</code></td>
-</tr>
-<tr class="even">
-<td align="left"><strong>Cost Bounding</strong></td>
-<td align="left"><strong>T06</strong></td>
-<td align="left">Set all cost parameters to <code>0</code>
-</td>
-<td align="left">Total costs must equal <code>0</code>
-</td>
-<td align="left"><code>check_model_costs(0, ...)</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><strong>Cost Bounding</strong></td>
-<td align="left"><strong>T09</strong></td>
-<td align="left">Set intervention costs to <code>0</code>
-</td>
-<td align="left">ICER is reduced</td>
-<td align="left"><code>compare_model_runs(get_icer, expect_lt)</code></td>
-</tr>
-<tr class="even">
-<td align="left"><strong>Cost Bounding</strong></td>
-<td align="left"><strong>T10</strong></td>
-<td align="left">Increase intervention costs</td>
-<td align="left">ICER is increased</td>
-<td align="left"><code>compare_model_runs(get_icer, expect_gt)</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><strong>Cost Bounding</strong></td>
-<td align="left"><strong>T11</strong></td>
-<td align="left">Zero cost discount rate
-(<code>discount_rate = 0</code>)</td>
-<td align="left">Discounted costs equal undiscounted costs</td>
-<td align="left"><code>compare_model_runs(get_costs, expect_equal)</code></td>
-</tr>
-<tr class="even">
-<td align="left"><strong>Cost Bounding</strong></td>
-<td align="left"><strong>T12</strong></td>
-<td align="left">Infinite cost discount rate
-(<code>discount_rate = 1000</code>)</td>
-<td align="left">Costs tend to zero</td>
-<td align="left"><code>check_model_costs(0, ...)</code></td>
-</tr>
-<tr class="odd">
-<td align="left"><strong>Population / LE</strong></td>
-<td align="left"><strong>T05</strong></td>
-<td align="left">Transition to death state set to <code>1</code>
-</td>
-<td align="left">Life Expectancy must equal <code>1</code> cycle</td>
-<td align="left"><code>check_model_le(1, ...)</code></td>
-</tr>
-<tr class="even">
-<td align="left"><strong>Population / LE</strong></td>
 <td align="left"><strong>T04</strong></td>
-<td align="left">Transition to death state set to <code>0</code>
-</td>
-<td align="left">Life Expectancy equals <code>n_cycles</code>
-</td>
-<td align="left"><code>check_model_le(n_cycles, ...)</code></td>
+<td align="left">QALY</td>
+<td align="left">Set discount rate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">= 0</annotation></semantics></math>
+(assuming utility
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">= 1</annotation></semantics></math>
+for all living health states)</td>
+<td align="left">Total QALYs equal LE</td>
 </tr>
 <tr class="odd">
-<td align="left"><strong>Treatment Arm</strong></td>
-<td align="left"><strong>T14</strong></td>
-<td align="left">Set all treatment parameters equal
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>θ</mi><mi>a</mi></msub><mo>=</mo><msub><mi>θ</mi><mi>b</mi></msub></mrow><annotation encoding="application/x-tex">\theta_a = \theta_b</annotation></semantics></math>)</td>
-<td align="left">Costs and QALYs equal across arms</td>
-<td align="left"><code>expect_equal(get_incremental_costs(r), 0)</code></td>
+<td align="left"><strong>T05</strong></td>
+<td align="left">QALY</td>
+<td align="left">Set all living health state utility parameters
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">= 1</annotation></semantics></math>
+</td>
+<td align="left">QALY gains exactly equal LYGs</td>
 </tr>
 <tr class="even">
-<td align="left"><strong>Treatment Arm</strong></td>
-<td align="left"><strong>T15</strong></td>
-<td align="left">Amend individual model parameter
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>θ</mi><mi>a</mi></msub><mo>≠</mo><msub><mi>θ</mi><mi>b</mi></msub></mrow><annotation encoding="application/x-tex">\theta_a \neq \theta_b</annotation></semantics></math>)</td>
-<td align="left">ICER is modified (verifies parameter sensitivity)</td>
-<td align="left"><code>compare_model_runs(get_icer, expect_false)</code></td>
+<td align="left"><strong>T06</strong></td>
+<td align="left">QALY</td>
+<td align="left">Apply standard positive discount rate
+vs. <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+rate</td>
+<td align="left"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">Discounted QALYs</mtext><mo>&lt;</mo><mrow><mtext mathvariant="normal">undiscounted QALYs </mtext><mspace width="0.333em"></mspace></mrow><mo>∀</mo><mrow><mspace width="0.333em"></mspace><mtext mathvariant="normal"> treatments</mtext></mrow></mrow><annotation encoding="application/x-tex">\text{Discounted QALYs} &lt; \text{undiscounted QALYs } \forall \text{ treatments}</annotation></semantics></math></td>
 </tr>
 <tr class="odd">
-<td align="left"><strong>Treatment Arm</strong></td>
-<td align="left"><strong>T16</strong></td>
-<td align="left">Swap treatment-specific parameters
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>θ</mi><mi>a</mi></msub><mo>↔</mo><msub><mi>θ</mi><mi>b</mi></msub></mrow><annotation encoding="application/x-tex">\theta_a \leftrightarrow \theta_b</annotation></semantics></math>)</td>
-<td align="left">QALYs and costs swap between arms</td>
-<td align="left"><code>expect_equal(costs_swapped["arm1"], costs_base["arm2"])</code></td>
+<td align="left"><strong>T07</strong></td>
+<td align="left">QALY</td>
+<td align="left">Set QALY discount rate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">= \infty</annotation></semantics></math>
+</td>
+<td align="left">QALY gains after time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+equal zero</td>
 </tr>
 <tr class="even">
-<td align="left"><strong>PSA / Sampling</strong></td>
-<td align="left"><strong>T13</strong></td>
-<td align="left">Draw
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
-samples from parameter distributions</td>
-<td align="left">All drawn values satisfy domain bounds (e.g. Beta
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>∈</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">\in [0,1]</annotation></semantics></math>,
-Lognormal
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">&gt;0</annotation></semantics></math>)</td>
-<td align="left"><code>expect_true(all(u &gt;= 0 &amp; u &lt;= 1))</code></td>
+<td align="left"><strong>T08</strong></td>
+<td align="left">Cost</td>
+<td align="left">Set intervention costs
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">= 0</annotation></semantics></math>
+</td>
+<td align="left">ICER is
+reduced<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi></mi><mo>†</mo></msup><annotation encoding="application/x-tex">^\dagger</annotation></semantics></math>
+</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>T09</strong></td>
+<td align="left">Cost</td>
+<td align="left">Increase intervention costs</td>
+<td align="left">ICER is
+increased<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi></mi><mo>†</mo></msup><annotation encoding="application/x-tex">^\dagger</annotation></semantics></math>
+</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>T10</strong></td>
+<td align="left">Cost</td>
+<td align="left">Set cost discount rate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">= 0</annotation></semantics></math>
+</td>
+<td align="left">Total costs equal the raw arithmetic sum of unadjusted
+state costs
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>∀</mo><annotation encoding="application/x-tex">\forall</annotation></semantics></math>
+treatments (and discounted costs
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>&lt;</mo><annotation encoding="application/x-tex">&lt;</annotation></semantics></math>
+undiscounted costs)</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>T11</strong></td>
+<td align="left">Cost</td>
+<td align="left">Set cost discount rate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>=</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">= \infty</annotation></semantics></math>
+</td>
+<td align="left">Costs after time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
+equal zero</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>T12</strong></td>
+<td align="left">Input</td>
+<td align="left">Sample parameters from probabilistic distributions</td>
+<td align="left">Range of sampled values does not violate distribution
+boundaries, <code>NaN</code>s, or critical numerical precision
+errors</td>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi></mi><mo>†</mo></msup><annotation encoding="application/x-tex">^\dagger</annotation></semantics></math><strong>Note on ICER Directionality (<code>T08</code> &amp;
+<code>T09</code>)</strong>: Assuming a controlled test environment where
+baseline Incremental Effects
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtext mathvariant="normal">IE</mtext><annotation encoding="application/x-tex">\text{IE}</annotation></semantics></math>)
+are known to be strictly positive
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">IE</mtext><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\text{IE} &gt; 0</annotation></semantics></math>).
+In <code>testthat</code>, this assumption can be guarded explicitly
+using <code>testthat::skip_if_not(inc_qalys &gt; 0, ...)</code>. If
+evaluating a scenario with negative incremental health effects, the
+verification logic should isolate Incremental Costs
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtext mathvariant="normal">IC</mtext><annotation encoding="application/x-tex">\text{IC}</annotation></semantics></math>)
+instead.</p>
+<p><strong>Note on Within-Cycle Correction (<code>T03</code>)</strong>:
+In models applying a standard half-cycle (or within-cycle) correction,
+setting mortality to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>100</mn><mi>%</mi></mrow><annotation encoding="application/x-tex">100\%</annotation></semantics></math>
+in the first cycle will conceptually result in a life expectancy of
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0.5</mn><annotation encoding="application/x-tex">0.5</annotation></semantics></math>
+cycles rather than
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1.0</mn><annotation encoding="application/x-tex">1.0</annotation></semantics></math>
+cycle.</p>
+</blockquote>
 <hr>
 </div>
 <div class="section level2">
@@ -328,20 +317,27 @@ Lognormal
 </h2>
 <ol style="list-style-type: decimal">
 <li>
+<strong>Cohn, M.</strong> (2009). <em>Succeeding with Agile:
+Software Development Using Scrum</em>. Addison-Wesley Professional.</li>
+<li>
+<strong>Wickham, H.</strong> (2011). testthat: Get Started with
+Testing. <em>The R Journal</em>, 3, 5–10.</li>
+<li>
+<strong>McCabe, C., &amp; Dixon, S.</strong> (2000). Testing the
+Validity of Cost-Effectiveness Models. <em>PharmacoEconomics</em>,
+17(5), 501–513.</li>
+<li>
 <strong>Tappenden, P., &amp; Chilcott, J. B.</strong> (2014).
 Avoiding and Identifying Errors and Other Threats to the Credibility of
-Health Economic Models. <em>PharmacoEconomics</em>, 32, 967–979. <a href="https://doi.org/10.1007/s40273-014-0186-2" class="external-link">https://doi.org/10.1007/s40273-014-0186-2</a>
-</li>
+Health Economic Models. <em>PharmacoEconomics</em>, 32, 967–979.</li>
 <li>
-<strong>Elbasha, E. H., &amp; Dasbach, E. J.</strong> (2017).
+<strong>Dasbach, E. J., &amp; Elbasha, E. H.</strong> (2017).
 Verification of Decision-Analytic Models for Health Economic
-Evaluations: An Overview. <em>PharmacoEconomics</em>, 35, 673–683. <a href="https://doi.org/10.1007/s40273-017-0508-2" class="external-link">https://doi.org/10.1007/s40273-017-0508-2</a>
-</li>
+Evaluations: An Overview. <em>PharmacoEconomics</em>, 35, 673–683.</li>
 <li>
-<strong>Alarid-Escudero, F., et al.</strong> (2019). A Need for
-Change! A Coding Framework for Improving Transparency in Decision
-Modeling. <em>PharmacoEconomics</em>, 37(11), 1329–1339. <a href="https://doi.org/10.1007/s40273-019-00837-x" class="external-link">https://doi.org/10.1007/s40273-019-00837-x</a>
-</li>
+<strong>Husereau, D., et al.</strong> (2013). Consolidated Health
+Economic Evaluation Reporting Standards (CHEERS) Statement. <em>European
+Journal of Health Economics</em>, 14(3), 367–372.</li>
 </ol>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -355,7 +351,7 @@ Modeling. <em>PharmacoEconomics</em>, 37(11), 1329–1339. <a href="https://doi.
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

@@ -1,4 +1,4 @@
-# Model Validation and Verification Guide
+# Custom Expectations and Advanced Testing
 
 ``` r
 
@@ -6,211 +6,286 @@ library(testhta)
 library(testthat)
 ```
 
-Health economic models are critical tools for healthcare
-decision-making, but their complexity makes them vulnerable to
-implementation errors. `testhta` provides a structured framework for
-model verification—ensuring that the mathematical and logical
-implementation of the model matches its conceptual specification.
+This guide corresponds to **Appendix A** of the tutorial paper and
+demonstrates:
 
-Rather than trying to read and manually inspect hundreds of lines of
-code, this package encourages modelers to write automated **unit tests**
-using the `testthat` framework to check model behavior under specific
-bounding conditions.
+1.  **Custom Expectation Helpers (Appendix A.1)**: Encapsulating
+    repetitive model-running and comparison logic into concise helper
+    functions
+    ([`check_model_qalys()`](https://validate-hta.github.io/testhta/reference/check_model_qalys.md),
+    [`check_model_costs()`](https://validate-hta.github.io/testhta/reference/check_model_costs.md),
+    [`check_model_le()`](https://validate-hta.github.io/testhta/reference/check_model_le.md),
+    [`check_model_le_pp()`](https://validate-hta.github.io/testhta/reference/check_model_le_pp.md),
+    and
+    [`compare_model_runs()`](https://validate-hta.github.io/testhta/reference/compare_model_runs.md)).
+2.  **Complete Registry Implementation (`T01` – `T11`)**: Writing the
+    full suite of QALY, Cost, and Population verification tests using
+    these helpers.
+3.  **Reproducible Stochastic PSA Tests with `withr` (Appendix A.2.1)**:
+    Implementing test `T12` using
+    [`withr::with_seed()`](https://withr.r-lib.org/reference/with_seed.html)
+    and
+    [`sample_psa_parameters()`](https://validate-hta.github.io/testhta/reference/sample_psa_parameters.md).
 
-This guide describes: 1. Core validation rules (test cases). 2. The
-testing helpers provided by `testhta`. 3. How to write validation tests
-for your own models.
+------------------------------------------------------------------------
 
-## 1. Core Model Validation Rules
+## 1. Custom Expectation Helpers
 
-Several logical rules must hold true for any cost-effectiveness model.
-`testhta` facilitates writing assertions for these:
+`testhta` exports custom expectation wrappers that run the model with
+parameter overrides, extract the relevant outcome, and assert equality
+or directional relationships via `testthat`:
 
-- **Discounting**: Total QALYs and costs with standard discounting
-  (e.g., 3.5%) must be strictly lower than undiscounted QALYs and costs.
-- **Extreme Discounting**: If the discount rate is extremely high
-  (e.g. $`\infty`$), all future costs and QALYs should go to zero.
-- **Utility Bounding**: If state utilities are set to 0, total QALYs
-  must equal 0. If state utilities are set to 1 and the discount rate is
-  0, total QALYs must exactly equal life expectancy.
-- **Life Expectancy Consistency**: Life expectancy should not be
-  affected by changes to cost or utility values, nor should it change
-  with the discount rate.
-- **Absorbing States**: If transition probabilities to the death state
-  are 1, life expectancy must be exactly 1 cycle. If transition
-  probabilities to death are 0, life expectancy must equal the time
-  horizon (`n_cycles`).
-- **Treatment Arm Equivalence & Symmetry**:
-  - Setting all treatment parameters equal across arms
-    ($`\theta_a = \theta_b`$) must produce equal costs and QALYs.
-  - Modifying individual parameters ($`\theta_a \neq \theta_b`$) must
-    alter model outcomes (verifying parameter wiring).
-  - Swapping treatment parameter vectors between arms
-    ($`\theta_a \leftrightarrow \theta_b`$) must swap the cost and QALY
-    outputs between those arms.
-- **PSA & Parameter Sampling Bounding**:
-  - Probabilistic sensitivity analysis (PSA) parameter draws must
-    strictly adhere to the domain limits of their statistical
-    distributions (e.g. Beta $`\in [0,1]`$, Lognormal $`>0`$).
+- `check_model_qalys(data, expected_qalys, ..., tolerance = NULL, label = NULL)`
+- `check_model_costs(data, expected_costs, ..., tolerance = NULL, label = NULL)`
+- `check_model_le(data, expected_le, ..., label = NULL)`
+- `check_model_le_pp(data, expected_le, ..., label = NULL)`
+- `compare_model_runs(extractor_fn, comparison_fn, params_1, params_2, data, label = NULL)`
 
-## 2. Using `testhta` Validation Helpers
+------------------------------------------------------------------------
 
-To make writing unit tests as readable and succinct as possible,
-`testhta` exports several test assertion helpers:
+## 2. Full Test Registry Suite (`T01` – `T11`)
 
-### Bounding Value Checks
-
-These functions check model outcomes against a single expected value:
-
-- `check_model_qalys(expected_qalys, data, ...)`
-- `check_model_costs(expected_costs, data, ...)`
-- `check_model_le(expected_le, data, ...)`
-
-For example, to test that QALYs are exactly zero when the discount rate
-is set to 1 (100%):
+Using `base_params` and the custom expectation helpers above, we can
+express the entire deterministic verification registry cleanly:
 
 ``` r
 
-data(test_data)
-
-check_model_qalys(
-  expected_qalys = 0,
-  data = test_data,
-  discount_rate = 1,
-  label = "QALYs are 0 under 100% discount rate"
-)
+data(base_params)
 ```
 
-Or that life expectancy is exactly 1 cycle when death probability is 1:
+### QALY Verification Tests (`T04` – `T07`)
 
 ``` r
 
-check_model_le(
-  expected_le = 1,
-  data = test_data,
-  p_healthy_death = 1,
-  p_sick_death = 1,
-  label = "LE is 1 when death probability is 1"
-)
-```
+test_that("QALY calculations", {
+  # T04: Undiscounted QALYs (with u=1) should equal LE
+  # This is a dynamic check (comparing two different outputs from the same run),
+  # so it is clearest to write directly with expect_equal().
+  u_one_matrix <- base_params$state_q_matrix
+  u_one_matrix[, c("Asymptomatic", "Progressive")] <- 1
 
-### Relational Comparisons
+  test_run_t04 <- run_model(
+    base_params,
+    discount_rate = 0,
+    state_q_matrix = u_one_matrix
+  )
+  expect_equal(
+    get_qalys(test_run_t04),
+    get_le(test_run_t04),
+    label = "T04: Undiscounted QALYs (with u=1) should equal LE"
+  )
 
-Use
-[`compare_model_runs()`](https://validate-hta.github.io/testhta/reference/compare_model_runs.md)
-to test that changing a parameter shifts model outcomes in the expected
-direction:
+  # T05: QALY gains exactly equal LYGs
+  test_run_t05 <- run_model(
+    base_params,
+    discount_rate = 0,
+    state_q_matrix = u_one_matrix
+  )
+  expect_equal(
+    get_qalys(test_run_t05)["with_drug"] -
+      get_qalys(test_run_t05)["without_drug"],
+    get_le(test_run_t05)["with_drug"] -
+      get_le(test_run_t05)["without_drug"],
+    label = "T05: QALYs exactly equals LYGs when all utilities are 1"
+  )
 
-- **Parameters**:
-  - `extractor_fn`: Function to get the outcome (e.g., `get_qalys`,
-    `get_costs`, `get_le`).
-  - `comparison_fn`: Comparison expectation (e.g., `expect_lt`,
-    `expect_gt`, `expect_equal`).
-  - `params_1`: List of parameter overrides for run 1.
-  - `params_2`: List of parameter overrides for run 2.
-  - `data`: Base dataset.
+  # T06: QALYs with standard discount < undiscounted QALYs
+  compare_model_runs(
+    extractor_fn = get_qalys,
+    comparison_fn = expect_lt,
+    params_1 = list(discount_rate = 0.035),
+    params_2 = list(discount_rate = 0),
+    data = base_params,
+    label = "T06: Discounted should be less than undiscounted QALYs"
+  )
 
-To verify that discounting reduces total costs:
+  # T07: QALY gains after time 0 equal zero
+  res_cycle_zero <- run_model(base_params, n_cycles = 1)
 
-``` r
-
-compare_model_runs(
-  extractor_fn = get_costs,
-  comparison_fn = expect_lt,
-  params_1 = list(discount_rate = 0.035), # Run 1: discounted
-  params_2 = list(discount_rate = 0),     # Run 2: undiscounted
-  data = test_data,
-  label = "Discounted costs are less than undiscounted costs"
-)
-```
-
-### Treatment Arm & Symmetry Tests
-
-To verify that treatment arms behave symmetrically and parameter wiring
-is valid using parameter-level getters and setters:
-
-``` r
-
-# T14: Equal inputs produce equal outputs across treatment arms
-data_eq <- test_data |>
-  set_costs("with_drug", get_state_costs(test_data, "without_drug")) |>
-  set_utilities("with_drug", get_state_utilities(test_data, "without_drug")) |>
-  set_p_matrix("with_drug", get_transition_matrix(test_data, "without_drug"))
-
-res_eq <- run_model(data_eq)
-expect_equal(get_costs(res_eq)["with_drug"], get_costs(res_eq)["without_drug"])
-
-# T16: Swapping parameters between arms swaps output outcomes
-arm1 <- "without_drug"
-arm2 <- "with_drug"
-
-data_swapped <- test_data |>
-  set_costs(arm1, get_state_costs(test_data, arm2)) |>
-  set_costs(arm2, get_state_costs(test_data, arm1)) |>
-  set_utilities(arm1, get_state_utilities(test_data, arm2)) |>
-  set_utilities(arm2, get_state_utilities(test_data, arm1)) |>
-  set_p_matrix(arm1, get_transition_matrix(test_data, arm2)) |>
-  set_p_matrix(arm2, get_transition_matrix(test_data, arm1))
-
-res_swapped <- run_model(data_swapped)
-expect_equal(get_costs(res_swapped)[arm1], get_costs(run_model(test_data))[arm2])
-```
-
-### Probabilistic (PSA) Parameter Sampling Tests
-
-To verify parameter distribution bounds before running PSA Monte Carlo
-simulations:
-
-``` r
-
-# T13: Samples lie within statistical distribution bounds
-set.seed(123)
-n_samples <- 1000
-u_draws <- rbeta(n_samples, shape1 = 8, shape2 = 2)
-expect_true(all(u_draws >= 0 & u_draws <= 1))
-
-cost_draws <- rlnorm(n_samples, meanlog = 5, sdlog = 0.5)
-expect_true(all(cost_draws > 0))
-```
-
-## 3. Integrating Validation into a Model Development Workflow
-
-When developing or modifying a health economic model, place your test
-files in the `tests/testthat/` directory of your R package.
-
-For example, create `tests/testthat/test-model_validation.R`:
-
-``` r
-
-library(testthat)
-library(testhta)
-
-data(test_data)
-
-test_that("economic logic holds for cohort markov model", {
-  # Discounting logic
-  compare_model_runs(get_qalys, expect_lt, list(discount_rate = 0.035), list(discount_rate = 0), test_data)
-  
-  # Life Expectancy logic
-  check_model_le(expected_le = 50, data = test_data, p_healthy_death = 0, p_sick_death = 0, n_cycles = 50)
-  
-  # Zero costs logic
-  check_model_costs(expected_costs = 0, data = test_data, c_healthy = 0, c_sick = 0, c_intervention = 0, c_death = 0)
-  
-  # Arm equivalence logic
-  state_c_eq <- test_data$state_c_matrix
-  state_c_eq["with_drug", ] <- state_c_eq["without_drug", ]
-  res_eq <- run_model(test_data, state_c_matrix = state_c_eq)
-  expect_equal(get_costs(res_eq)["with_drug"], get_costs(res_eq)["without_drug"])
+  check_model_qalys(
+    data = base_params,
+    discount_rate = 1000,
+    expected_qalys = get_qalys(res_cycle_zero),
+    tolerance = 0.01,
+    label = "T07: High discount total QALYs equal cycle 0 QALYs"
+  )
 })
+#> Test passed with 5 successes 🥇.
 ```
 
-You can execute your tests at any point during development by running:
+### Cost Verification Tests (`T08` – `T11`)
 
 ``` r
 
-devtools::test()
+test_that("Cost calculations", {
+  # Calculate baseline incremental QALYs
+  base_res <- run_model(base_params)
+  base_qalys <- get_qalys(base_res)
+  inc_qalys <- unname(
+    base_qalys["with_drug"] - base_qalys["without_drug"]
+  )
+
+  # skip the rest of this block if assumption fails
+  testthat::skip_if_not(
+    inc_qalys > 0,
+    "Baseline incremental QALYs are <= 0. Skipping ICER directionality tests."
+  )
+
+  # T08: Set intervention costs = 0. ICER is reduced
+  # (Assuming baseline Incremental Effects are strictly positive)
+  c_mat_zero_int <- base_params$state_c_matrix
+  c_mat_zero_int["with_drug", "Asymptomatic"] <-
+    c_mat_zero_int["without_drug", "Asymptomatic"]
+
+  compare_model_runs(
+    extractor_fn = get_icer,
+    comparison_fn = expect_lt,
+    params_1 = list(state_c_matrix = c_mat_zero_int),
+    params_2 = list(),
+    data = base_params,
+    label = "T08: Intervention costs = 0 reduces ICER"
+  )
+
+  # T09: Increase intervention costs. ICER is increased
+  c_mat_high_int <- base_params$state_c_matrix
+  c_mat_high_int["with_drug", "Asymptomatic"] <-
+    c_mat_high_int["without_drug", "Asymptomatic"] + 10000
+
+  compare_model_runs(
+    extractor_fn = get_icer,
+    comparison_fn = expect_gt,
+    params_1 = list(state_c_matrix = c_mat_high_int),
+    params_2 = list(),
+    data = base_params,
+    label = "T09: Increasing intervention costs increases ICER"
+  )
+
+  # T10: Costs with standard discount < undiscounted costs
+  compare_model_runs(
+    extractor_fn = get_costs,
+    comparison_fn = expect_lt,
+    params_1 = list(discount_rate = 0.035),
+    params_2 = list(discount_rate = 0),
+    data = base_params,
+    label = "T10: Discounted less than undiscounted costs"
+  )
+
+  # T11: Set cost discount rate to infinity. Costs equal zero t > 0
+  res_cycle_zero <- run_model(base_params, n_cycles = 1)
+  check_model_costs(
+    data = base_params,
+    discount_rate = 1000,
+    expected_costs = get_costs(res_cycle_zero),
+    tolerance = 0.01,
+    label = "T11: High discount total costs equal cycle 0 costs"
+  )
+})
+#> Test passed with 5 successes 🎊.
 ```
 
-This automates the verification process and acts as a safety net against
-accidental bugs when updating transitions, costs, or utility functions.
+### Population Verification Tests (`T01` – `T03`)
+
+``` r
+
+test_that("Population calculations using life expectancy (LE)", {
+  t_names <- get_arm_names(base_params)
+
+  # T01: Treatment effect the same for all treatments (including no treatment)
+  no_effect_p_matrix <- base_params$p_matrix
+  no_effect_p_matrix[, , "with_drug"] <-
+    no_effect_p_matrix[, , "without_drug"]
+  res_no_effect <- run_model(base_params, p_matrix = no_effect_p_matrix)
+
+  expect_equal(
+    unname(get_qalys(res_no_effect)["with_drug"]),
+    unname(get_qalys(res_no_effect)["without_drug"]),
+    label = "T01: QALYs must be equal when relative treatment effect is 1"
+  )
+
+  expect_equal(
+    unname(get_le(res_no_effect)["with_drug"]),
+    unname(get_le(res_no_effect)["without_drug"]),
+    label = "T01: LEs must be equal when relative treatment effect is 1"
+  )
+
+  # T02: If all transition probabilities to death are 0, LE is n_cycles
+  n_cycles_test <- 50
+  no_death_p_matrix <- base_params$p_matrix
+  no_death_p_matrix[, "Dead", ] <- 0
+
+  # Normalise all rows simultaneously
+  no_death_p_matrix <- prop.table(no_death_p_matrix, margin = c(1, 3))
+
+  no_death_p_matrix["Dead", , ] <- 0
+  no_death_p_matrix["Dead", "Dead", ] <- 1
+
+  no_death_p_matrix <- array(
+    no_death_p_matrix,
+    dim = dim(base_params$p_matrix),
+    dimnames = dimnames(base_params$p_matrix)
+  )
+
+  check_model_le_pp(
+    data = base_params,
+    p_matrix = no_death_p_matrix,
+    n_cycles = n_cycles_test,
+    expected_le = setNames(c(n_cycles_test, n_cycles_test), t_names),
+    label = "T02: LE should be n_cycles when all p_death=0"
+  )
+
+  # T03: If all transition probabilities to death are 1, LE is 1 cycle
+  # (LE expectation depends on within-cycle correction implementation)
+  dead_p_matrix <- base_params$p_matrix
+  dead_p_matrix[] <- 0
+  dead_p_matrix[, "Dead", ] <- 1
+
+  check_model_le_pp(
+    data = base_params,
+    p_matrix = dead_p_matrix,
+    expected_le = setNames(c(1, 1), t_names),
+    label = "T03: LE should be 1 when all p_death=1"
+  )
+})
+#> Test passed with 4 successes 🌈.
+```
+
+------------------------------------------------------------------------
+
+## 3. Reproducible Stochastic PSA Tests with `withr` (`T12`)
+
+Probabilistic Sensitivity Analysis (PSA) involves random sampling, so
+stochastic tests must set a random number generator (RNG) seed to be
+reproducible. Rather than calling
+[`set.seed()`](https://rdrr.io/r/base/Random.html) globally—which
+permanently alters the RNG state for subsequent tests—the `withr`
+package provides
+[`withr::with_seed()`](https://withr.r-lib.org/reference/with_seed.html),
+which sets the seed temporarily for a single code block and
+automatically restores the previous RNG state afterward.
+
+Test `T12` verifies that Beta-distributed utility draws generated by
+[`sample_psa_parameters()`](https://validate-hta.github.io/testhta/reference/sample_psa_parameters.md)
+remain strictly within $`(0, 1)`$:
+
+``` r
+
+test_that("T12: PSA beta samples remain within (0, 1)", {
+  withr::with_seed(42, {
+    psa_samples <- sample_psa_parameters(
+      n_sim = 1000,
+      base_params = base_params
+    )
+    beta_cols <- grep("^utility_", names(psa_samples), value = TRUE)
+    for (col in beta_cols) {
+      expect_true(
+        all(psa_samples[[col]] > 0 & psa_samples[[col]] < 1),
+        label = paste0(
+          "T12: beta-sampled '", col,
+          "' must lie strictly in (0, 1)"
+        )
+      )
+    }
+  })
+})
+#> Test passed with 2 successes 🎊.
+```

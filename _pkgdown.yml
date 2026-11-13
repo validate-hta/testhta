@@ -14,13 +14,13 @@ navbar:
     articles:
       text: "Guides"
       menu:
-        - text: "Writing Basic Bounding Tests"
-          href: articles/basic-tests.html
-        - text: "HTA Model Bounding & Validation"
-          href: articles/validation-guide.html
-        - text: "The HTA Verification Framework"
+        - text: "The HTA Verification Framework (T01–T12)"
           href: articles/verification-framework.html
-        - text: "Automating HTA Model Validation with Unit Tests"
+        - text: "R Test Code Examples"
+          href: articles/basic-tests.html
+        - text: "Custom Expectations and Advanced Testing"
+          href: articles/validation-guide.html
+        - text: "Automating Tests and AI-Assisted Verification"
           href: articles/automating-hta-unit-tests.html
 
 reference:
@@ -35,6 +35,7 @@ reference:
       - check_model_qalys
       - check_model_costs
       - check_model_le
+      - check_model_le_pp
       - compare_model_runs
   - title: "Model Setters & Getters"
     desc: "Helper functions to modify input parameters, query parameter matrices by treatment arm, and extract outcomes during test execution."
@@ -48,15 +49,20 @@ reference:
       - get_state_utilities
       - get_transition_matrix
       - get_qalys
+      - get_qalys_pp
       - get_costs
+      - get_costs_pp
       - get_le
+      - get_le_pp
       - get_icer
       - get_incremental_costs
       - get_incremental_qalys
       - get_arm_names
   - title: "Example Case Study Model"
-    desc: "The cohort Markov model engine used as the demonstration environment for these testing tools."
+    desc: "The cohort Markov model engine and baseline dataset used as the demonstration environment in the tutorial paper."
     contents:
       - ce_markov
       - p_matrix_cycle
+      - sample_psa_parameters
+      - base_params
       - test_data

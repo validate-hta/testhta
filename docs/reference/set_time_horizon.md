@@ -16,7 +16,7 @@ set_time_horizon(input, scenario, values)
 
 - scenario:
 
-  The scenario name or index, or values if scenario is omitted.
+  The scenario name or index, or values if `values` is omitted.
 
 - values:
 
@@ -29,6 +29,6 @@ The modified list of parameters.
 ## Examples
 
 ``` r
-data(test_data)
-updated <- set_time_horizon(test_data, 10)
+data(base_params)
+updated <- set_time_horizon(base_params, 10)
 ```

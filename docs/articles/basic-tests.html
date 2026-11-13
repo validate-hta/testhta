@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Writing Basic Bounding Tests • testhta</title>
+<title>R Test Code Examples • testhta</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -15,7 +15,7 @@
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Writing Basic Bounding Tests">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="R Test Code Examples">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -39,10 +39,10 @@
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-guides" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Guides</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-guides">
-<li><a class="dropdown-item" href="../articles/basic-tests.html">Writing Basic Bounding Tests</a></li>
-    <li><a class="dropdown-item" href="../articles/validation-guide.html">HTA Model Bounding &amp; Validation</a></li>
-    <li><a class="dropdown-item" href="../articles/verification-framework.html">The HTA Verification Framework</a></li>
-    <li><a class="dropdown-item" href="../articles/automating-hta-unit-tests.html">Automating HTA Model Validation with Unit Tests</a></li>
+<li><a class="dropdown-item" href="../articles/verification-framework.html">The HTA Verification Framework (T01–T12)</a></li>
+    <li><a class="dropdown-item" href="../articles/basic-tests.html">R Test Code Examples</a></li>
+    <li><a class="dropdown-item" href="../articles/validation-guide.html">Custom Expectations and Advanced Testing</a></li>
+    <li><a class="dropdown-item" href="../articles/automating-hta-unit-tests.html">Automating Tests and AI-Assisted Verification</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -61,7 +61,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Writing Basic Bounding Tests</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>R Test Code Examples</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/validate-hta/testhta/blob/HEAD/vignettes/basic-tests.Rmd" class="external-link"><code>vignettes/basic-tests.Rmd</code></a></small>
@@ -73,169 +73,249 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://validate-hta.github.io/testhta/">testhta</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://testthat.r-lib.org" class="external-link">testthat</a></span><span class="op">)</span></span></code></pre></div>
-<p>In health economic model verification, <strong>basic bounding
-tests</strong> check whether a model behaves correctly under extreme or
-“boundary” conditions where the mathematical output is known <em>a
-priori</em>.</p>
-<p>Unlike relational tests (which compare two different runs using
-<code><a href="../reference/compare_model_runs.html">compare_model_runs()</a></code>), basic bounding tests assert model
-outputs against a single, static expected value (e.g. checking that
-costs are exactly 0 when unit costs are 0, or that QALYs are 0 under
-100% discounting).</p>
-<p><code>testhta</code> provides three key assertion functions to write
-these tests without needing custom comparison wrappers: -
-<code>check_model_qalys(expected_qalys, data, ...)</code> -
-<code>check_model_costs(expected_costs, data, ...)</code> -
-<code>check_model_le(expected_le, data, ...)</code></p>
-<p>This vignette demonstrates how to implement these basic bounding
-tests using the package’s built-in cohort Markov model as a case
-study.</p>
-<hr>
-<div class="section level2">
-<h2 id="qaly-bounding-tests">1. QALY Bounding Tests<a class="anchor" aria-label="anchor" href="#qaly-bounding-tests"></a>
-</h2>
-<p>QALY calculations are sensitive to utility weights and discount
-rates. Under extreme conditions, QALY outcomes can be predicted
-exactly.</p>
-<div class="section level3">
-<h3 id="t01-extreme-discounting-100">T01: Extreme Discounting (100%)<a class="anchor" aria-label="anchor" href="#t01-extreme-discounting-100"></a>
-</h3>
-<p>If the discount rate is extremely high
-(e.g. <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1.0</mn><annotation encoding="application/x-tex">1.0</annotation></semantics></math>,
-representing a
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>100</mn><mi>%</mi></mrow><annotation encoding="application/x-tex">100\%</annotation></semantics></math>
-discount rate), all future value is discounted to zero immediately. In
-<code>testhta</code>, a discount rate of 1 or greater sets all cycle
-values to 0. We expect total QALYs to equal 0.</p>
+<p>This vignette steps through how to use the <code>testthat</code>
+package in R to automate verification tests of a cost-effectiveness
+analysis using the 3-state cohort Markov model
+(<code><a href="../reference/ce_markov.html">ce_markov()</a></code>), corresponding to Section 6 of the tutorial
+paper.</p>
+<p>We first load the baseline parameter list
+<code>base_params</code>:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">test_data</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/check_model_qalys.html">check_model_qalys</a></span><span class="op">(</span></span>
-<span>  expected_qalys <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  discount_rate <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  label <span class="op">=</span> <span class="st">"T01: QALYs are 0 when discount rate is 100%"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">base_params</span><span class="op">)</span></span></code></pre></div>
+<p>We recommend prefixing every <code><a href="https://testthat.r-lib.org/reference/test_that.html" class="external-link">test_that()</a></code> description
+with its unique identifier from the Test Registry (e.g.,
+<code>"T06: ..."</code>). If a check fails, <code>testthat</code> will
+immediately flag which requirement ID was broken.</p>
+<hr>
+<div class="section level2">
+<h2 id="discounting-tests-t06-t07-t11">1. Discounting Tests (<code>T06</code>, <code>T07</code>,
+<code>T11</code>)<a class="anchor" aria-label="anchor" href="#discounting-tests-t06-t07-t11"></a>
+</h2>
+<p>A fundamental property of health economic models is that the present
+value
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mi>V</mi></mrow><annotation encoding="application/x-tex">PV</annotation></semantics></math>)
+of a future value
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>F</mi><mi>V</mi></mrow><annotation encoding="application/x-tex">FV</annotation></semantics></math>)
+decreases as time
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math>
+increases into the future and the discount rate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>r</mi><annotation encoding="application/x-tex">r</annotation></semantics></math>
+increases:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>q</mi><mrow><mi>P</mi><mi>V</mi></mrow></msub><mo>=</mo><mfrac><msub><mi>q</mi><mrow><mi>F</mi><mi>V</mi></mrow></msub><mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>r</mi><msup><mo stretchy="false" form="postfix">)</mo><mi>t</mi></msup></mrow></mfrac></mrow><annotation encoding="application/x-tex">
+q_{PV} = \frac{q_{FV}}{(1 + r)^t}
+</annotation></semantics></math></p>
+<p>The verification tests corresponding to discounting in the Test
+Registry are <code>T04</code>, <code>T06</code>, <code>T07</code> (for
+QALYs) and <code>T10</code>, <code>T11</code> (for costs).</p>
 <div class="section level3">
-<h3 id="t08-infinite-discounting">T08: Infinite Discounting<a class="anchor" aria-label="anchor" href="#t08-infinite-discounting"></a>
+<h3 id="test-t06-discounted-qalys-are-strictly-lower-than-undiscounted-qalys">Test <code>T06</code>: Discounted QALYs Are Strictly Lower Than
+Undiscounted QALYs<a class="anchor" aria-label="anchor" href="#test-t06-discounted-qalys-are-strictly-lower-than-undiscounted-qalys"></a>
 </h3>
-<p>Similarly, if we simulate an infinite discount rate
-(e.g. <code>discount_rate = 1000</code>), QALY gains must tend to
-zero.</p>
+<p>To verify that applying a standard positive discount rate
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>3.5</mn><mi>%</mi></mrow><annotation encoding="application/x-tex">r = 3.5\%</annotation></semantics></math>)
+results in strictly lower total QALYs compared to an undiscounted run
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>0</mn><mi>%</mi></mrow><annotation encoding="application/x-tex">r = 0\%</annotation></semantics></math>)
+for both treatment scenarios
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>s</mi><mo>=</mo><mn>1</mn><mo>,</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">s = 1, 2</annotation></semantics></math>):</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Step 1</strong>: Run the model with discount rate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>0</mn><mi>%</mi></mrow><annotation encoding="application/x-tex">r = 0\%</annotation></semantics></math>
+(undiscounted).</li>
+<li>
+<strong>Step 2</strong>: Run the model with discount rate
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>=</mo><mn>3.5</mn><mi>%</mi></mrow><annotation encoding="application/x-tex">r = 3.5\%</annotation></semantics></math>
+(discounted).</li>
+<li>
+<strong>Step 3</strong>: Assert that
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>q</mi><mrow><mi>P</mi><mi>V</mi></mrow><mi>s</mi></msubsup><mo stretchy="false" form="prefix">(</mo><mi>r</mi><mo>=</mo><mn>3.5</mn><mi>%</mi><mo stretchy="false" form="postfix">)</mo><mo>&lt;</mo><msubsup><mi>q</mi><mrow><mi>P</mi><mi>V</mi></mrow><mi>s</mi></msubsup><mo stretchy="false" form="prefix">(</mo><mi>r</mi><mo>=</mo><mn>0</mn><mi>%</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">q^s_{PV}(r = 3.5\%) &lt; q^s_{PV}(r = 0\%)</annotation></semantics></math>
+for each treatment using <code><a href="https://testthat.r-lib.org/reference/comparison-expectations.html" class="external-link">expect_lt()</a></code>.</li>
+</ol>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_model_qalys.html">check_model_qalys</a></span><span class="op">(</span></span>
-<span>  expected_qalys <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  discount_rate <span class="op">=</span> <span class="fl">1000</span>,</span>
-<span>  label <span class="op">=</span> <span class="st">"T08: QALYs tend to 0 under infinite discounting"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://testthat.r-lib.org/reference/test_that.html" class="external-link">test_that</a></span><span class="op">(</span><span class="st">"T06: Discounted QALYs are lower than undiscounted QALYs"</span>, <span class="op">{</span></span>
+<span>  <span class="co"># run model with standard discounting (3.5%)</span></span>
+<span>  <span class="va">results_discounted</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/with.html" class="external-link">with</a></span><span class="op">(</span></span>
+<span>    <span class="va">base_params</span>,</span>
+<span>    <span class="fu"><a href="../reference/ce_markov.html">ce_markov</a></span><span class="op">(</span></span>
+<span>      <span class="va">start_pop</span>, <span class="va">p_matrix</span>, <span class="va">state_c_matrix</span>,</span>
+<span>      <span class="va">state_q_matrix</span>, <span class="va">n_cycles</span>,</span>
+<span>      discount_rate <span class="op">=</span> <span class="fl">0.035</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># run model with NO discounting (0%)</span></span>
+<span>  <span class="va">results_undiscounted</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/with.html" class="external-link">with</a></span><span class="op">(</span></span>
+<span>    <span class="va">base_params</span>,</span>
+<span>    <span class="fu"><a href="../reference/ce_markov.html">ce_markov</a></span><span class="op">(</span></span>
+<span>      <span class="va">start_pop</span>, <span class="va">p_matrix</span>, <span class="va">state_c_matrix</span>,</span>
+<span>      <span class="va">state_q_matrix</span>, <span class="va">n_cycles</span>,</span>
+<span>      discount_rate <span class="op">=</span> <span class="fl">0.0</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># alternatively, using the run_model() wrapper:</span></span>
+<span>  <span class="co"># results_discounted &lt;- run_model(base_params, discount_rate = 0.035)</span></span>
+<span>  <span class="co"># results_undiscounted &lt;- run_model(base_params, discount_rate = 0.00)</span></span>
+<span></span>
+<span>  <span class="co"># extract the total QALYs using getter</span></span>
+<span>  <span class="va">qaly_discounted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_qalys.html">get_qalys</a></span><span class="op">(</span><span class="va">results_discounted</span><span class="op">)</span></span>
+<span>  <span class="va">qaly_undiscounted</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_qalys.html">get_qalys</a></span><span class="op">(</span><span class="va">results_undiscounted</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># expectation: discounted must be less than undiscounted value</span></span>
+<span>  <span class="fu"><a href="https://testthat.r-lib.org/reference/comparison-expectations.html" class="external-link">expect_lt</a></span><span class="op">(</span></span>
+<span>    <span class="va">qaly_discounted</span><span class="op">[</span><span class="st">"without_drug"</span><span class="op">]</span>,</span>
+<span>    <span class="va">qaly_undiscounted</span><span class="op">[</span><span class="st">"without_drug"</span><span class="op">]</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://testthat.r-lib.org/reference/comparison-expectations.html" class="external-link">expect_lt</a></span><span class="op">(</span></span>
+<span>    <span class="va">qaly_discounted</span><span class="op">[</span><span class="st">"with_drug"</span><span class="op">]</span>,</span>
+<span>    <span class="va">qaly_undiscounted</span><span class="op">[</span><span class="st">"with_drug"</span><span class="op">]</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Test passed with 2 successes 🥇</span>.</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="t04-zero-utilities">T04: Zero Utilities<a class="anchor" aria-label="anchor" href="#t04-zero-utilities"></a>
+<h3 id="tests-t07-t11-high-discounting-reduces-future-value-to-zero">Tests <code>T07</code> &amp; <code>T11</code>: High Discounting
+Reduces Future Value to Zero<a class="anchor" aria-label="anchor" href="#tests-t07-t11-high-discounting-reduces-future-value-to-zero"></a>
 </h3>
-<p>If all health state utilities are set to 0, no QALYs can be
-accumulated, regardless of survival or discounting. We can test this by
-setting the utility values to 0:</p>
+<p>Under an arbitrarily large discount rate
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>r</mi><mo>→</mo><mi>∞</mi></mrow><annotation encoding="application/x-tex">r \to \infty</annotation></semantics></math>),
+all costs and QALYs incurred after the initial cycle
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>t</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">t &gt; 0</annotation></semantics></math>)
+converge to zero, so total outcomes across the full time horizon equal
+the outcomes from cycle 0 alone (<code>n_cycles = 1</code>). Because
+this check depends on numerical convergence, we use the
+<code>tolerance</code> argument in <code><a href="https://testthat.r-lib.org/reference/equality-expectations.html" class="external-link">expect_equal()</a></code>.</p>
+<blockquote>
+<p><strong>Why use <code>discount_rate = 1000</code> instead of
+<code>Inf</code>?</strong><br>
+While <code>Inf</code> is mathematically ideal, an arbitrarily large
+finite number (<code>1000</code>) is recommended in practice so that
+test code remains generalizable and computationally stable when adapted
+for downstream numerical operations (such as optimization routines) that
+may fail on strictly infinite values.</p>
+</blockquote>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_model_qalys.html">check_model_qalys</a></span><span class="op">(</span></span>
-<span>  expected_qalys <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  u_healthy <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  u_sick <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  label <span class="op">=</span> <span class="st">"T04: QALYs are 0 when all utility inputs are 0"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://testthat.r-lib.org/reference/test_that.html" class="external-link">test_that</a></span><span class="op">(</span><span class="st">"T07 &amp; T11: High discounting reduces future value to 0"</span>, <span class="op">{</span></span>
+<span>  <span class="co"># Run full model with extreme discount</span></span>
+<span>  <span class="va">res_high_disc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_model.html">run_model</a></span><span class="op">(</span><span class="va">base_params</span>, discount_rate <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># Run a baseline model for only 1 cycle (time 0)</span></span>
+<span>  <span class="va">res_cycle_zero</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_model.html">run_model</a></span><span class="op">(</span><span class="va">base_params</span>, n_cycles <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># Check Costs (T11)</span></span>
+<span>  <span class="fu"><a href="https://testthat.r-lib.org/reference/equality-expectations.html" class="external-link">expect_equal</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/get_costs.html">get_costs</a></span><span class="op">(</span><span class="va">res_high_disc</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/get_costs.html">get_costs</a></span><span class="op">(</span><span class="va">res_cycle_zero</span><span class="op">)</span>,</span>
+<span>    tolerance <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>    label <span class="op">=</span> <span class="st">"T11: High discount total costs equal cycle 0 costs"</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># Check QALYs (T07)</span></span>
+<span>  <span class="fu"><a href="https://testthat.r-lib.org/reference/equality-expectations.html" class="external-link">expect_equal</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/get_qalys.html">get_qalys</a></span><span class="op">(</span><span class="va">res_high_disc</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="../reference/get_qalys.html">get_qalys</a></span><span class="op">(</span><span class="va">res_cycle_zero</span><span class="op">)</span>,</span>
+<span>    tolerance <span class="op">=</span> <span class="fl">0.01</span>,</span>
+<span>    label <span class="op">=</span> <span class="st">"T07: High discount total QALYs equal cycle 0 QALYs"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Test passed with 2 successes 🎊</span>.</span></span></code></pre></div>
 <hr>
 </div>
 </div>
 <div class="section level2">
-<h2 id="cost-bounding-tests">2. Cost Bounding Tests<a class="anchor" aria-label="anchor" href="#cost-bounding-tests"></a>
+<h2 id="unit-costs-and-utilities-tests-t08">2. Unit Costs and Utilities Tests (<code>T08</code>)<a class="anchor" aria-label="anchor" href="#unit-costs-and-utilities-tests-t08"></a>
 </h2>
-<p>Similar to QALYs, cost calculations must equal zero under specific
-extreme parameters.</p>
-<div class="section level3">
-<h3 id="t06-zero-unit-costs">T06: Zero Unit Costs<a class="anchor" aria-label="anchor" href="#t06-zero-unit-costs"></a>
-</h3>
-<p>If all health state occupancy costs, transition costs, and
-intervention costs are set to 0, the model must output a total cost of
-0.</p>
+<p>Tests for unit costs and utilities often evaluate boundary conditions
+where specific cost or utility components are zeroed out or scaled. Test
+<code>T08</code> evaluates the boundary condition where the intervention
+cost is removed by setting the <code>with_drug</code> state costs equal
+to the <code>without_drug</code> baseline costs:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>C</mi><mn>2</mn></msup><mo>=</mo><msup><mi>C</mi><mn>1</mn></msup></mrow><annotation encoding="application/x-tex">
+C^2 = C^1
+</annotation></semantics></math></p>
+<p>Provided that baseline Incremental Effects
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mtext mathvariant="normal">IE</mtext><annotation encoding="application/x-tex">\text{IE}</annotation></semantics></math>)
+are strictly positive
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">IE</mtext><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\text{IE} &gt; 0</annotation></semantics></math>),
+removing the intervention cost must strictly reduce the ICER. We use
+<code><a href="https://testthat.r-lib.org/reference/skip.html" class="external-link">testthat::skip_if_not()</a></code> to explicitly guard this
+directional assumption:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_model_costs.html">check_model_costs</a></span><span class="op">(</span></span>
-<span>  expected_costs <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  c_healthy <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  c_sick <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  c_intervention <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  c_death <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  label <span class="op">=</span> <span class="st">"T06: Costs are 0 when all cost parameters are 0"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://testthat.r-lib.org/reference/test_that.html" class="external-link">test_that</a></span><span class="op">(</span><span class="st">"T08: Zero intervention cost strictly reduces ICER"</span>, <span class="op">{</span></span>
+<span>  <span class="co"># Temporary wrapper to isolate intervention cost</span></span>
+<span>  <span class="va">run_with_intervention_cost</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">c_int</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">temp_params</span> <span class="op">&lt;-</span> <span class="va">base_params</span></span>
+<span>    <span class="va">temp_params</span><span class="op">$</span><span class="va">state_c_matrix</span><span class="op">[</span><span class="st">"with_drug"</span>, <span class="st">"Asymptomatic"</span><span class="op">]</span> <span class="op">&lt;-</span></span>
+<span>      <span class="va">temp_params</span><span class="op">$</span><span class="va">state_c_matrix</span><span class="op">[</span><span class="st">"without_drug"</span>, <span class="st">"Asymptomatic"</span><span class="op">]</span> <span class="op">+</span> <span class="va">c_int</span></span>
+<span></span>
+<span>    <span class="fu"><a href="../reference/run_model.html">run_model</a></span><span class="op">(</span><span class="va">temp_params</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span></span>
+<span>  <span class="co"># Run model with a standard positive intervention cost</span></span>
+<span>  <span class="va">res_base</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_model.html">run_model</a></span><span class="op">(</span><span class="va">base_params</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># Run model with zero intervention cost</span></span>
+<span>  <span class="va">res_no_int</span> <span class="op">&lt;-</span> <span class="fu">run_with_intervention_cost</span><span class="op">(</span>c_int <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># extract ICERs</span></span>
+<span>  <span class="va">res_no_int_icer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_icer.html">get_icer</a></span><span class="op">(</span><span class="va">res_no_int</span><span class="op">)</span></span>
+<span>  <span class="va">res_base_icer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_icer.html">get_icer</a></span><span class="op">(</span><span class="va">res_base</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># extract baseline Incremental Effects (IE) to handle ICER directionality</span></span>
+<span>  <span class="va">base_qalys</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_qalys.html">get_qalys</a></span><span class="op">(</span><span class="va">res_base</span><span class="op">)</span></span>
+<span>  <span class="va">res_base_ie</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span></span>
+<span>    <span class="va">base_qalys</span><span class="op">[</span><span class="st">"with_drug"</span><span class="op">]</span> <span class="op">-</span> <span class="va">base_qalys</span><span class="op">[</span><span class="st">"without_drug"</span><span class="op">]</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># verify ICER directional change based on the sign of IE</span></span>
+<span>  <span class="co"># skip the rest of this block if assumption fails</span></span>
+<span>  <span class="fu">testthat</span><span class="fu">::</span><span class="fu"><a href="https://testthat.r-lib.org/reference/skip.html" class="external-link">skip_if_not</a></span><span class="op">(</span></span>
+<span>    <span class="va">res_base_ie</span> <span class="op">&gt;</span> <span class="fl">0</span>,</span>
+<span>    <span class="st">"Baseline incremental QALYs are &lt;= 0. Skipping ICER directionality tests."</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span>  <span class="fu"><a href="https://testthat.r-lib.org/reference/comparison-expectations.html" class="external-link">expect_lt</a></span><span class="op">(</span><span class="va">res_no_int_icer</span>, <span class="va">res_base_icer</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Test passed with 1 success 🌈</span>.</span></span></code></pre></div>
+<hr>
 </div>
-<div class="section level3">
-<h3 id="t12-infinite-cost-discounting">T12: Infinite Cost Discounting<a class="anchor" aria-label="anchor" href="#t12-infinite-cost-discounting"></a>
-</h3>
-<p>With an infinite cost discount rate, all costs incurred after time 0
-are discounted to zero. Because <code>testhta</code> treats discount
-rates
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>≥</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\ge 1</annotation></semantics></math>
-as zeroing out all cycles, we assert:</p>
+<div class="section level2">
+<h2 id="population-tests-t03">3. Population Tests (<code>T03</code>)<a class="anchor" aria-label="anchor" href="#population-tests-t03"></a>
+</h2>
+<p>Transition matrix logic can be verified by forcing extreme mortality
+risks to check life expectancy (<code>T01</code>, <code>T02</code>,
+<code>T03</code>). In Test <code>T03</code>, we set the probability of
+transitioning to <code>"Dead"</code> to
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>100</mn><mi>%</mi></mrow><annotation encoding="application/x-tex">100\%</annotation></semantics></math>)
+immediately for all states:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>P</mi><mi>s</mi></msup><mo>=</mo><mrow><mo stretchy="true" form="prefix">(</mo><mtable><mtr><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd></mtr><mtr><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>0</mn></mtd><mtd columnalign="center" style="text-align: center"><mn>1</mn></mtd></mtr></mtable><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">
+P^s = \begin{pmatrix}
+0 &amp; 0 &amp; 1 \\
+0 &amp; 0 &amp; 1 \\
+0 &amp; 0 &amp; 1
+\end{pmatrix}
+</annotation></semantics></math></p>
+<p>Using the named dimension <code>"Dead"</code> rather than a numeric
+column index keeps the test readable and self-documenting. With no
+within-cycle correction applied, per-person life expectancy
+(<code><a href="../reference/get_le_pp.html">get_le_pp()</a></code>) must equal exactly
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>
+cycle for both scenarios:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_model_costs.html">check_model_costs</a></span><span class="op">(</span></span>
-<span>  expected_costs <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  discount_rate <span class="op">=</span> <span class="fl">1000</span>,</span>
-<span>  label <span class="op">=</span> <span class="st">"T12: Costs tend to 0 under infinite discounting"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<hr>
-</div>
-</div>
-<div class="section level2">
-<h2 id="population-life-expectancy-le-bounding-tests">3. Population &amp; Life Expectancy (LE) Bounding Tests<a class="anchor" aria-label="anchor" href="#population-life-expectancy-le-bounding-tests"></a>
-</h2>
-<p>Survival transitions govern the population trace. We can verify
-survival calculations by setting transition probabilities to death to
-extreme bounds.</p>
-<div class="section level3">
-<h3 id="t05-absolute-mortality-100-death-rate">T05: Absolute Mortality (100% Death Rate)<a class="anchor" aria-label="anchor" href="#t05-absolute-mortality-100-death-rate"></a>
-</h3>
-<p>If the probability of transitioning to the “Dead” state is set to 1
-for all alive states, the cohort will die immediately in the first
-cycle. Since the cohort only lives for cycle 1, the life expectancy must
-equal exactly 1.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_model_le.html">check_model_le</a></span><span class="op">(</span></span>
-<span>  expected_le <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  p_healthy_death <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  p_sick_death <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  label <span class="op">=</span> <span class="st">"T05: Life expectancy is 1 when death rate is 100%"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="t10-modified-zero-mortality-no-death-bounding">T10 (Modified): Zero Mortality (No-Death Bounding)<a class="anchor" aria-label="anchor" href="#t10-modified-zero-mortality-no-death-bounding"></a>
-</h3>
-<p>If the probability of death is set to 0, no member of the cohort can
-die. Thus, the entire cohort must survive for the full time horizon
-(<code>n_cycles</code>). If we set the time horizon to 50 cycles, the
-life expectancy must be exactly 50.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/check_model_le.html">check_model_le</a></span><span class="op">(</span></span>
-<span>  expected_le <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>  data <span class="op">=</span> <span class="va">test_data</span>,</span>
-<span>  p_healthy_death <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  p_sick_death <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  n_cycles <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>  label <span class="op">=</span> <span class="st">"T10: Life expectancy equals time horizon when death rate is 0%"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<hr>
-</div>
-</div>
-<div class="section level2">
-<h2 id="summary-of-bounding-tests">Summary of Bounding Tests<a class="anchor" aria-label="anchor" href="#summary-of-bounding-tests"></a>
-</h2>
-<p>By utilizing static bounding tests, you can guarantee that the
-mathematical limits of your model are preserved. These tests form the
-bedrock of your verification suite, ensuring that simple arithmetic
-mistakes or indexing shifts do not pass undetected.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://testthat.r-lib.org/reference/test_that.html" class="external-link">test_that</a></span><span class="op">(</span><span class="st">"T03: Immediate mortality gives life expectancy of 1"</span>, <span class="op">{</span></span>
+<span>  <span class="co"># modify p_matrix to force death</span></span>
+<span>  <span class="va">dead_p_matrix</span> <span class="op">&lt;-</span> <span class="va">base_params</span><span class="op">$</span><span class="va">p_matrix</span></span>
+<span>  <span class="va">dead_p_matrix</span><span class="op">[</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">0</span></span>
+<span>  <span class="va">dead_p_matrix</span><span class="op">[</span>, <span class="st">"Dead"</span>, <span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span> <span class="co"># all transitions go to Dead</span></span>
+<span></span>
+<span>  <span class="va">res_death</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_model.html">run_model</a></span><span class="op">(</span><span class="va">base_params</span>, p_matrix <span class="op">=</span> <span class="va">dead_p_matrix</span><span class="op">)</span></span>
+<span>  <span class="va">res_le</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_le_pp.html">get_le_pp</a></span><span class="op">(</span><span class="va">res_death</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># is per-person life expectancy for all scenarios = 1 cycle</span></span>
+<span>  <span class="fu"><a href="https://testthat.r-lib.org/reference/equality-expectations.html" class="external-link">expect_equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">res_le</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">res_le</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="co">#&gt; <span style="font-weight: bold;">Test passed with 1 success 🎊</span>.</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -248,7 +328,7 @@ mistakes or indexing shifts do not pass undetected.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

@@ -5,10 +5,14 @@ Run model and check Life Expectancy against an expected value
 ## Usage
 
 ``` r
-check_model_le(expected_le, ..., label = NULL)
+check_model_le(data, expected_le, ..., label = NULL)
 ```
 
 ## Arguments
+
+- data:
+
+  Baseline input data list.
 
 - expected_le:
 
@@ -26,11 +30,18 @@ check_model_le(expected_le, ..., label = NULL)
 
 ## Value
 
-None, called for side effects (testthat assertion).
+None, called for side effects (`testthat` assertion).
 
 ## Examples
 
 ``` r
-data(test_data)
-check_model_le(1, data = test_data, p_healthy_death = 1, p_sick_death = 1)
+data(base_params)
+dead_p_matrix <- base_params$p_matrix
+dead_p_matrix[] <- 0
+dead_p_matrix[, "Dead", ] <- 1
+check_model_le(
+  data = base_params,
+  expected_le = 1000,
+  p_matrix = dead_p_matrix
+)
 ```

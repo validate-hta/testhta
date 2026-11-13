@@ -7,7 +7,7 @@
 use_hta_unittests(
   path = ".",
   filename = "test-hta_model.R",
-  data_name = "test_data",
+  data_name = "base_params",
   overwrite = FALSE
 )
 }
@@ -16,30 +16,31 @@ use_hta_unittests(
 Defaults to the current working directory (\code{"."}).}
 
 \item{filename}{A character string for the test file name.
-Defaults to \code{"test-hta_model.R"}. Note: \code{testthat} requires file names to begin with \code{"test-"}.}
+Defaults to \code{"test-hta_model.R"}. Note: \code{testthat} requires file names to
+begin with \code{"test-"}.}
 
-\item{data_name}{A character string specifying the variable name of your model's
-data object. Defaults to \code{"test_data"}.}
+\item{data_name}{A character string specifying the variable name of your
+model's data object. Defaults to \code{"base_params"}.}
 
 \item{overwrite}{A logical value indicating whether to overwrite an existing
 file if it already exists. Defaults to \code{FALSE}.}
 }
 \value{
-A logical value indicating whether the file was created successfully,
-returned invisibly.
+A logical value indicating whether the file was created
+successfully, returned invisibly.
 }
 \description{
-Creates a \code{testthat} directory structure (if needed) and generates a unit test
-script aligned with the HTA Verification Registry (T01 - T16). Automatically
-substitutes the baseline dataset reference (\code{test_data}) with your specified
-model data object name.
+Creates a \code{testthat} directory structure (if needed) and generates a unit
+test script aligned with the HTA Verification Registry (\code{T01} - \code{T12}).
+Automatically substitutes the baseline dataset reference (\code{base_params})
+with your specified model data object name.
 }
 \examples{
 \dontrun{
-# Generate default tests using 'test_data'
+# Generate default tests using 'base_params'
 use_hta_unittests()
 
-# Substitute 'test_data' with your custom model object name
+# Substitute 'base_params' with your custom model object name
 use_hta_unittests(data_name = "my_oncology_model")
 }
 }

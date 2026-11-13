@@ -7,19 +7,20 @@
 get_costs(res, arm = NULL)
 }
 \arguments{
-\item{res}{A list of results returned by ce_markov.}
+\item{res}{A list of results returned by \code{ce_markov()}.}
 
 \item{arm}{Optional treatment arm name or index.}
 }
 \value{
-A numeric vector of total costs by treatment, or a single numeric value if arm is specified.
+A numeric vector of total costs by treatment, or a single numeric
+value if \code{arm} is specified.
 }
 \description{
 Getter for costs
 }
 \examples{
-data(test_data)
-res <- run_model(test_data)
+data(base_params)
+res <- run_model(base_params)
 get_costs(res)
 get_costs(res, "with_drug")
 }

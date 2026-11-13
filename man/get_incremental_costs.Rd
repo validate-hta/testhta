@@ -7,20 +7,21 @@
 get_incremental_costs(res, arm1 = "without_drug", arm2 = "with_drug")
 }
 \arguments{
-\item{res}{A list of results returned by ce_markov.}
+\item{res}{A list of results returned by \code{ce_markov()}.}
 
-\item{arm1}{Baseline treatment arm name or index (default: "without_drug").}
+\item{arm1}{Baseline treatment arm name or index (default:
+\code{"without_drug"}).}
 
-\item{arm2}{Comparator treatment arm name or index (default: "with_drug").}
+\item{arm2}{Comparator treatment arm name or index (default: \code{"with_drug"}).}
 }
 \value{
-A numeric value of incremental cost (arm 2 minus arm 1).
+A numeric value of incremental cost (\code{arm2} minus \code{arm1}).
 }
 \description{
 Getter for incremental costs
 }
 \examples{
-data(test_data)
-res <- run_model(test_data)
+data(base_params)
+res <- run_model(base_params)
 get_incremental_costs(res)
 }

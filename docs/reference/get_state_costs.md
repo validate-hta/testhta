@@ -21,13 +21,13 @@ get_state_costs(input, arm = NULL)
 ## Value
 
 A vector of state costs for the specified arm, or the full cost matrix
-if arm is NULL.
+if `arm` is `NULL`.
 
 ## Examples
 
 ``` r
-data(test_data)
-get_state_costs(test_data, "without_drug")
-#> Asymptomatic_disease  Progressive_disease                 Dead 
-#>                  500                 3000                    0 
+data(base_params)
+get_state_costs(base_params, "without_drug")
+#> Asymptomatic  Progressive         Dead 
+#>          100          200            0 
 ```
